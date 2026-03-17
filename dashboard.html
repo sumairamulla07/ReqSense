@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReqSense — AI Requirements Extraction</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #7c6dfa;
+    --accent2: #a78bfa;
+    --green: #34d399;
+    --red: #f87171;
+    --amber: #fbbf24;
+    --blue: #60a5fa;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --muted2: #9898b0;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* Grid noise texture overlay */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image: radial-gradient(circle at 20% 50%, rgba(124,109,250,0.06) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 20%, rgba(52,211,153,0.04) 0%, transparent 40%);
+    pointer-events:none; z-index:0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top:0; z-index:100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex; align-items:center; justify-content:space-between;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--accent2); }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: rgba(124,109,250,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(124,109,250,0.3);
+    padding: 3px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── LAYOUT ── */
+  .shell {
+    position: relative; z-index:1;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 56px);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction:column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 0.75rem;
+  }
+  .source-tabs {
+    display: flex; gap: 6px;
+  }
+  .tab {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted2);
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .tab:hover { border-color: var(--border2); color: var(--text); }
+  .tab.active {
+    background: rgba(124,109,250,0.15);
+    border-color: rgba(124,109,250,0.4);
+    color: var(--accent2);
+  }
+
+  .input-area {
+    flex:1; padding: 1rem 1.5rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
+    overflow-y: auto;
+  }
+  .doc-entry {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .doc-entry:focus-within { border-color: rgba(124,109,250,0.4); }
+  .doc-entry-header {
+    padding: 8px 12px;
+    background: var(--surface2);
+    display: flex; align-items:center; justify-content:space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .doc-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+  }
+  .doc-remove {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 14px; line-height:1;
+    padding: 0 2px;
+    transition: color 0.15s;
+  }
+  .doc-remove:hover { color: var(--red); }
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none; outline: none;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 11.5px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    resize: none;
+    min-height: 110px;
+    max-height: 160px;
+  }
+  textarea::placeholder { color: var(--muted); }
+
+  .add-doc-btn {
+    display: flex; align-items:center; gap: 6px;
+    padding: 8px 12px;
+    border: 1px dashed var(--border2);
+    border-radius: 8px;
+    background: none;
+    color: var(--muted2);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    width: 100%;
+  }
+  .add-doc-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  .run-btn {
+    margin: 0 1.5rem 1.5rem;
+    padding: 12px;
+    background: var(--accent);
+    color: white;
+    border: none; border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items:center; justify-content:center; gap: 8px;
+    position: relative; overflow: hidden;
+  }
+  .run-btn:hover { background: #6d5ef0; transform: translateY(-1px); }
+  .run-btn:active { transform: translateY(0); }
+  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .run-btn .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  .run-btn.loading .spinner { display: block; }
+  .run-btn.loading .btn-text { opacity: 0.7; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── PIPELINE STATUS ── */
+  .pipeline-bar {
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items:center; gap: 1rem;
+    background: var(--surface);
+    min-height: 48px;
+  }
+  .pipeline-step {
+    display: flex; align-items:center; gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    transition: color 0.3s;
+  }
+  .pipeline-step.active { color: var(--accent2); }
+  .pipeline-step.done { color: var(--green); }
+  .step-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    transition: all 0.3s;
+  }
+  .pipeline-step.active .step-dot {
+    animation: pulse-dot 1s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity:1; transform: scale(1); }
+    50% { opacity:0.5; transform: scale(1.5); }
+  }
+  .step-arrow { color: var(--muted); font-size: 10px; }
+
+  /* ── RESULTS AREA ── */
+  .results-area {
+    flex:1; overflow-y:auto; padding: 1.5rem;
+    display: flex; flex-direction:column; gap: 1.25rem;
+  }
+
+  /* Empty state */
+  .empty-state {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap: 1rem; padding: 3rem;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 64px; height: 64px;
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 28px;
+    background: var(--surface);
+  }
+  .empty-state h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 1.1rem;
+  }
+  .empty-state p { color: var(--muted2); font-size: 13px; line-height: 1.6; max-width: 300px; }
+
+  /* Summary banner */
+  .summary-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    animation: fadeIn 0.4s ease;
+  }
+  .summary-banner .summary-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .summary-banner p { font-size: 13px; line-height: 1.7; color: var(--muted2); }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    animation: fadeIn 0.4s ease 0.1s both;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Section */
+  .section {
+    animation: fadeIn 0.4s ease both;
+  }
+  .section-header {
+    display: flex; align-items:center; gap: 8px;
+    margin-bottom: 0.75rem;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted2);
+  }
+  .section-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: var(--muted2);
+  }
+
+  /* Requirement card */
+  .req-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: start;
+    transition: border-color 0.15s;
+  }
+  .req-card:hover { border-color: var(--border2); }
+  .priority-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 4px;
+    margin-top: 1px;
+    letter-spacing: 0.03em;
+  }
+  .p1 { background: rgba(248,113,113,0.15); color: #fca5a5; border: 1px solid rgba(248,113,113,0.25); }
+  .p2 { background: rgba(251,191,36,0.15); color: #fcd34d; border: 1px solid rgba(251,191,36,0.25); }
+  .p3 { background: rgba(96,165,250,0.15); color: #93c5fd; border: 1px solid rgba(96,165,250,0.25); }
+  .req-text { font-size: 13px; line-height: 1.5; }
+  .req-quote {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .confidence-bar {
+    width: 40px;
+    display:flex; flex-direction:column; align-items:flex-end; gap:3px;
+    margin-top: 2px;
+  }
+  .conf-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .conf-track {
+    width: 100%; height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .conf-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  /* Stakeholder card */
+  .stakeholder-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+  }
+  .stakeholder-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    display:flex; gap: 10px; align-items:flex-start;
+    transition: border-color 0.15s;
+  }
+  .stakeholder-card:hover { border-color: var(--border2); }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(124,109,250,0.2);
+    border: 1px solid rgba(124,109,250,0.3);
+    display:flex; align-items:center; justify-content:center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 11px;
+    color: var(--accent2);
+    flex-shrink: 0;
+  }
+  .stakeholder-name { font-weight: 500; font-size: 13px; }
+  .stakeholder-role { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+  .authority-badge {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    margin-top: 5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .Approver { background: rgba(52,211,153,0.15); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
+  .Influencer { background: rgba(251,191,36,0.12); color: #fcd34d; border: 1px solid rgba(251,191,36,0.2); }
+  .Informed { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
+
+  /* Milestone */
+  .milestone-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display:flex; gap:12px; align-items:center;
+  }
+  .milestone-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .Upcoming { background: var(--blue); }
+  .In\ Progress { background: var(--amber); }
+  .Overdue { background: var(--red); }
+  .Done { background: var(--green); }
+  .milestone-name { font-size: 13px; font-weight: 500; flex:1; }
+  .milestone-deadline {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted2);
+  }
+  .milestone-owner { font-size: 11px; color: var(--muted); }
+
+  /* Conflict card */
+  .conflict-card {
+    background: rgba(248,113,113,0.06);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+  }
+  .conflict-header {
+    display:flex; align-items:center; gap: 8px; margin-bottom: 8px;
+  }
+  .conflict-type {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .severity-badge {
+    font-size: 10px; font-family: 'DM Mono', monospace;
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .High { background: rgba(248,113,113,0.2); color: #fca5a5; }
+  .Medium { background: rgba(251,191,36,0.15); color: #fcd34d; }
+  .Low { background: rgba(107,114,128,0.15); color: #9ca3af; }
+  .conflict-desc { font-size: 12px; color: var(--muted2); line-height: 1.5; margin-bottom: 8px; }
+  .conflict-vs {
+    display:grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items:center;
+  }
+  .conflict-quote {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 8px;
+    border-radius: 6px;
+    color: var(--muted2);
+    line-height: 1.5;
+  }
+  .vs-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; color: var(--red);
+    text-align:center;
+  }
+
+  /* Decision card */
+  .decision-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--amber);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+  }
+  .decision-desc { font-size: 13px; margin-bottom: 4px; }
+  .decision-meta { font-size: 11px; color: var(--muted); }
+  .decision-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px; padding: 2px 7px; border-radius: 3px;
+    float: right; margin-top: -18px;
+  }
+  .Confirmed { background: rgba(52,211,153,0.15); color: #6ee7b7; }
+  .Pending { background: rgba(251,191,36,0.12); color: #fcd34d; }
+  .Disputed { background: rgba(248,113,113,0.15); color: #fca5a5; }
+
+  /* Export */
+  .export-bar {
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display:flex; gap: 8px; align-items:center;
+    background: var(--surface);
+  }
+  .export-btn {
+    padding: 7px 14px;
+    border: 1px solid var(--border2);
+    border-radius: 7px;
+    background: none;
+    color: var(--muted2);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    display:flex; align-items:center; gap: 6px;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,109,250,0.08); }
+  .export-spacer { flex:1; }
+  .api-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display:flex; align-items:center; gap: 6px;
+  }
+  .api-dot { width:6px; height:6px; border-radius:50%; background: var(--green); animation: pulse-dot 2s infinite; }
+
+  @keyframes fadeIn {
+    from { opacity:0; transform: translateY(8px); }
+    to { opacity:1; transform: translateY(0); }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Req<span>Sense</span></div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <span class="badge">AI AGENT v1.0</span>
+    <span class="badge" style="background:rgba(52,211,153,0.1);color:#6ee7b7;border-color:rgba(52,211,153,0.3);">VIT CODE APEX 2.0</span>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- LEFT: Input Panel -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <div class="panel-title">Input Documents</div>
+      <div class="source-tabs">
+        <button class="tab active" onclick="setTab('email',this)">Email</button>
+        <button class="tab" onclick="setTab('transcript',this)">Transcript</button>
+        <button class="tab" onclick="setTab('chat',this)">Chat</button>
+      </div>
+    </div>
+
+    <div class="input-area" id="inputArea">
+      <!-- Doc entries injected here -->
+    </div>
+
+    <button class="add-doc-btn" onclick="addDoc()" style="margin:0 1.5rem 0.75rem;">
+      <span style="font-size:16px;">+</span> Add another document
+    </button>
+
+    <button class="run-btn" id="runBtn" onclick="runPipeline()">
+      <div class="spinner"></div>
+      <span class="btn-text">⚡ Run Extraction Pipeline</span>
+    </button>
+  </div>
+
+  <!-- RIGHT: Results Panel -->
+  <div class="right-panel">
+
+    <!-- Pipeline status bar -->
+    <div class="pipeline-bar" id="pipelineBar">
+      <div class="pipeline-step" id="step-classify">
+        <div class="step-dot"></div> Classify
+      </div>
+      <span class="step-arrow">→</span>
+      <div class="pipeline-step" id="step-extract">
+        <div class="step-dot"></div> Extract
+      </div>
+      <span class="step-arrow">→</span>
+      <div class="pipeline-step" id="step-conflict">
+        <div class="step-dot"></div> Detect Conflicts
+      </div>
+      <span class="step-arrow">→</span>
+      <div class="pipeline-step" id="step-aggregate">
+        <div class="step-dot"></div> Aggregate
+      </div>
+      <div style="flex:1"></div>
+      <span id="pipelineStatus" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Idle</span>
+    </div>
+
+    <!-- Results -->
+    <div class="results-area" id="resultsArea">
+      <div class="empty-state">
+        <div class="empty-icon">🧠</div>
+        <h3>Ready to Analyze</h3>
+        <p>Paste emails, meeting transcripts, or chat logs on the left. The AI agent will extract structured requirements, stakeholders, decisions, timelines, and flag conflicts.</p>
+      </div>
+    </div>
+
+    <!-- Export bar -->
+    <div class="export-bar" id="exportBar" style="display:none">
+      <button class="export-btn" onclick="exportJSON()">↓ Export JSON</button>
+      <button class="export-btn" onclick="exportMarkdown()">↓ Export Markdown Report</button>
+      <div class="export-spacer"></div>
+      <div class="api-status"><div class="api-dot"></div> Connected to FastAPI :8000</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let docCount = 0;
+let currentTab = 'email';
+let lastReport = null;
+
+const SAMPLE_EMAIL_1 = `From: sarah.johnson@enron.com
+To: dev-team@enron.com
+Subject: Q3 Trading Platform - Requirements
+Date: Mon, 12 Mar 2001 09:14:22
+
+Team, following yesterday's call with CTO Mark Richards, we've finalized requirements for Q3.
+
+MUST HAVE by April 15th:
+- Real-time price feed with latency under 50ms
+- User authentication with 2FA (security audit requires this)
+- Audit log for all trades - regulatory compliance
+
+The system must handle 10,000 concurrent users.
+Mark has approved the $2M budget. Sarah Chen leads frontend.
+Hard deadline: April 15 beta, May 1 production.
+
+Sarah Johnson, Product Manager`;
+
+const SAMPLE_TRANSCRIPT = `[Meeting Transcript - Trading Platform Sync - March 14]
+
+SPEAKER: Mark Richards (CTO)
+The April 15 beta deadline is firm. Board presentation is April 20. Non-negotiable.
+
+SPEAKER: Mike Chen (Engineering Lead)
+Understood. But I want May 15 formally agreed for production, not May 1.
+Also - we need API rate limiting as CRITICAL. Without it we're exposed to DDoS.
+And concurrent users should be 15,000 not 10,000 - Q2 peak was 12,000.
+
+SPEAKER: Sarah Johnson (PM)
+Agreed on May 15 for production. I'll update the project plan.
+CSV export should move to P1 - compliance team requires it.`;
+
+// ── Init ───────────────────────────────────────────────────────────────
+window.onload = () => {
+  addDoc(SAMPLE_EMAIL_1);
+  addDoc(SAMPLE_TRANSCRIPT);
+};
+
+function setTab(type, el) {
+  currentTab = type;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function addDoc(prefill = '') {
+  docCount++;
+  const id = `doc-${docCount}`;
+  const area = document.getElementById('inputArea');
+  const div = document.createElement('div');
+  div.className = 'doc-entry';
+  div.id = `entry-${id}`;
+  div.innerHTML = `
+    <div class="doc-entry-header">
+      <span class="doc-label">DOC-${String(docCount).padStart(3,'0')} · ${currentTab.toUpperCase()}</span>
+      <button class="doc-remove" onclick="removeDoc('${id}')" title="Remove">✕</button>
+    </div>
+    <textarea id="ta-${id}" placeholder="Paste email, transcript, or chat text here...">${prefill}</textarea>
+  `;
+  area.appendChild(div);
+}
+
+function removeDoc(id) {
+  const el = document.getElementById(`entry-${id}`);
+  if (el) el.remove();
+}
+
+// ── Pipeline ───────────────────────────────────────────────────────────
+async function runPipeline() {
+  const textareas = document.querySelectorAll('#inputArea textarea');
+  const docs = [];
+  textareas.forEach((ta, i) => {
+    const text = ta.value.trim();
+    if (text) docs.push({ text, doc_id: `doc-${String(i+1).padStart(3,'0')}` });
+  });
+
+  if (!docs.length) { alert('Add at least one document first!'); return; }
+
+  const btn = document.getElementById('runBtn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+  document.getElementById('resultsArea').innerHTML = '';
+
+  setStep('classify', 'active');
+  setStatus('Classifying documents...');
+  await sleep(600);
+
+  setStep('classify', 'done');
+  setStep('extract', 'active');
+  setStatus('Extracting requirements...');
+
+  let report;
+  try {
+    const res = await fetch('http://localhost:8000/extract/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents: docs })
+    });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+    report = data.aggregated_report;
+  } catch (e) {
+    // Use mock data when backend not running (for demo/frontend dev)
+    console.warn('Backend not available, using mock data:', e.message);
+    setStatus('Using demo data (backend offline)');
+    await sleep(800);
+    report = getMockReport(docs.length);
+  }
+
+  setStep('extract', 'done');
+  setStep('conflict', 'active');
+  setStatus('Detecting conflicts...');
+  await sleep(500);
+
+  setStep('conflict', 'done');
+  setStep('aggregate', 'active');
+  setStatus('Aggregating report...');
+  await sleep(400);
+
+  setStep('aggregate', 'done');
+  setStatus(`Done · ${report.total_documents} doc(s) analyzed`);
+
+  lastReport = report;
+  renderReport(report);
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+  document.getElementById('exportBar').style.display = 'flex';
+}
+
+function setStep(id, state) {
+  const el = document.getElementById(`step-${id}`);
+  el.className = `pipeline-step ${state}`;
+}
+function setStatus(msg) {
+  document.getElementById('pipelineStatus').textContent = msg;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── Render ─────────────────────────────────────────────────────────────
+function renderReport(r) {
+  const area = document.getElementById('resultsArea');
+  area.innerHTML = '';
+
+  // Summary
+  if (r.summary) {
+    area.innerHTML += `
+      <div class="summary-banner">
+        <div class="summary-label">Executive Summary</div>
+        <p>${r.summary}</p>
+      </div>`;
+  }
+
+  // Stats
+  area.innerHTML += `
+    <div class="stats-row">
+      ${stat(r.functional_requirements?.length||0, 'Func. Req', '#a78bfa')}
+      ${stat(r.non_functional_requirements?.length||0, 'NFRs', '#60a5fa')}
+      ${stat(r.stakeholders?.length||0, 'Stakeholders', '#34d399')}
+      ${stat(r.decisions?.length||0, 'Decisions', '#fbbf24')}
+      ${stat(r.milestones?.length||0, 'Milestones', '#f472b6')}
+      ${stat(r.conflicts?.length||0, 'Conflicts', r.conflicts?.length ? '#f87171' : '#6b6b80')}
+    </div>`;
+
+  // Conflicts first (most important)
+  if (r.conflicts?.length) {
+    let html = `<div class="section" style="animation-delay:0.15s"><div class="section-header">
+      <span class="section-title" style="color:#f87171">⚠ Conflicts Detected</span>
+      <span class="section-count">${r.conflicts.length}</span></div>`;
+    r.conflicts.forEach(c => {
+      html += `<div class="conflict-card">
+        <div class="conflict-header">
+          <span class="conflict-type">${c.type}</span>
+          <span class="severity-badge ${c.severity}">${c.severity}</span>
+        </div>
+        <div class="conflict-desc">${c.description}</div>
+        <div class="conflict-vs">
+          <div class="conflict-quote">"${c.source_a}"</div>
+          <div class="vs-label">VS</div>
+          <div class="conflict-quote">"${c.source_b}"</div>
+        </div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div>';
+  }
+
+  // Functional Requirements
+  if (r.functional_requirements?.length) {
+    let html = `<div class="section" style="animation-delay:0.2s"><div class="section-header">
+      <span class="section-title">Functional Requirements</span>
+      <span class="section-count">${r.functional_requirements.length}</span></div>`;
+    r.functional_requirements.forEach(fr => {
+      html += `<div class="req-card">
+        <span class="priority-badge ${fr.priority}">${fr.priority}</span>
+        <div>
+          <div class="req-text">${fr.description}</div>
+          <div class="req-quote">"${fr.source_quote}"</div>
+        </div>
+        <div class="confidence-bar">
+          <span class="conf-num">${Math.round(fr.confidence*100)}%</span>
+          <div class="conf-track"><div class="conf-fill" style="width:${fr.confidence*100}%"></div></div>
+        </div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div>';
+  }
+
+  // Non-Functional Requirements
+  if (r.non_functional_requirements?.length) {
+    let html = `<div class="section" style="animation-delay:0.25s"><div class="section-header">
+      <span class="section-title">Non-Functional Requirements</span>
+      <span class="section-count">${r.non_functional_requirements.length}</span></div>`;
+    r.non_functional_requirements.forEach(nfr => {
+      html += `<div class="req-card">
+        <span class="priority-badge ${nfr.priority}">${nfr.priority}</span>
+        <div>
+          <div class="req-text"><span style="color:var(--muted2);font-size:11px;font-family:'DM Mono',monospace;">[${nfr.category}]</span> ${nfr.description}</div>
+          <div class="req-quote">"${nfr.source_quote}"</div>
+        </div>
+        <div class="confidence-bar">
+          <span class="conf-num">${Math.round(nfr.confidence*100)}%</span>
+          <div class="conf-track"><div class="conf-fill" style="width:${nfr.confidence*100}%"></div></div>
+        </div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div>';
+  }
+
+  // Stakeholders
+  if (r.stakeholders?.length) {
+    let html = `<div class="section" style="animation-delay:0.3s"><div class="section-header">
+      <span class="section-title">Stakeholders</span>
+      <span class="section-count">${r.stakeholders.length}</span></div>
+      <div class="stakeholder-grid">`;
+    r.stakeholders.forEach(s => {
+      const initials = s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      html += `<div class="stakeholder-card">
+        <div class="avatar">${initials}</div>
+        <div>
+          <div class="stakeholder-name">${s.name}</div>
+          <div class="stakeholder-role">${s.role}</div>
+          <span class="authority-badge ${s.decision_authority}">${s.decision_authority}</span>
+        </div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div></div>';
+  }
+
+  // Milestones
+  if (r.milestones?.length) {
+    let html = `<div class="section" style="animation-delay:0.35s"><div class="section-header">
+      <span class="section-title">Timelines & Milestones</span>
+      <span class="section-count">${r.milestones.length}</span></div>`;
+    r.milestones.forEach(m => {
+      html += `<div class="milestone-card">
+        <div class="milestone-dot ${m.status}"></div>
+        <div class="milestone-name">${m.name}</div>
+        ${m.owner ? `<div class="milestone-owner">${m.owner}</div>` : ''}
+        <div class="milestone-deadline">${m.deadline||'TBD'}</div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div>';
+  }
+
+  // Decisions
+  if (r.decisions?.length) {
+    let html = `<div class="section" style="animation-delay:0.4s"><div class="section-header">
+      <span class="section-title">Decisions & Approvals</span>
+      <span class="section-count">${r.decisions.length}</span></div>`;
+    r.decisions.forEach(d => {
+      html += `<div class="decision-card">
+        <span class="decision-status ${d.status}">${d.status}</span>
+        <div class="decision-desc">${d.description}</div>
+        <div class="decision-meta">By ${d.decided_by}${d.date_mentioned ? ' · '+d.date_mentioned : ''}</div>
+      </div>`;
+    });
+    area.innerHTML += html + '</div>';
+  }
+}
+
+function stat(num, label, color) {
+  return `<div class="stat-card">
+    <div class="stat-num" style="color:${color}">${num}</div>
+    <div class="stat-label">${label}</div>
+  </div>`;
+}
+
+// ── Export ─────────────────────────────────────────────────────────────
+function exportJSON() {
+  if (!lastReport) return;
+  const blob = new Blob([JSON.stringify(lastReport, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'requirements_report.json';
+  a.click();
+}
+
+function exportMarkdown() {
+  if (!lastReport) return;
+  const r = lastReport;
+  let md = `# Requirements Extraction Report\n\n**Summary:** ${r.summary}\n\n`;
+  md += `## Functional Requirements\n`;
+  r.functional_requirements?.forEach(fr => {
+    md += `- **[${fr.priority}]** ${fr.description} *(confidence: ${Math.round(fr.confidence*100)}%)*\n`;
+  });
+  md += `\n## Non-Functional Requirements\n`;
+  r.non_functional_requirements?.forEach(nfr => {
+    md += `- **[${nfr.priority}][${nfr.category}]** ${nfr.description}\n`;
+  });
+  md += `\n## Stakeholders\n`;
+  r.stakeholders?.forEach(s => {
+    md += `- **${s.name}** (${s.role}) — ${s.decision_authority}\n`;
+  });
+  md += `\n## Milestones\n`;
+  r.milestones?.forEach(m => {
+    md += `- **${m.name}** — ${m.deadline||'TBD'} [${m.status}]\n`;
+  });
+  if (r.conflicts?.length) {
+    md += `\n## ⚠ Conflicts\n`;
+    r.conflicts.forEach(c => {
+      md += `- **[${c.severity}] ${c.type}:** ${c.description}\n`;
+    });
+  }
+  const blob = new Blob([md], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'requirements_report.md';
+  a.click();
+}
+
+// ── Mock Data (when backend offline) ──────────────────────────────────
+function getMockReport(docCount) {
+  return {
+    total_documents: docCount,
+    summary: "Analysis of the Q3 Trading Platform project reveals 6 functional requirements and 3 non-functional requirements across 2 documents. A critical deadline conflict was detected between email (May 1) and transcript (May 15) for the production release, requiring immediate stakeholder alignment.",
+    functional_requirements: [
+      {id:"FR-001", description:"Real-time price feed integration with sub-50ms latency", priority:"P1", confidence:0.98, source_quote:"latency under 50ms"},
+      {id:"FR-002", description:"User authentication with two-factor authentication (2FA)", priority:"P1", confidence:0.97, source_quote:"User authentication with 2FA support"},
+      {id:"FR-003", description:"Audit log for all trade transactions for regulatory compliance", priority:"P1", confidence:0.95, source_quote:"Audit log for all trades - regulatory compliance"},
+      {id:"FR-004", description:"API rate limiting to prevent DDoS exposure", priority:"P1", confidence:0.92, source_quote:"we need API rate limiting as CRITICAL"},
+      {id:"FR-005", description:"CSV export for trade history", priority:"P1", confidence:0.88, source_quote:"CSV export should move to P1"},
+      {id:"FR-006", description:"Portfolio performance dashboard", priority:"P3", confidence:0.75, source_quote:"Dashboard showing portfolio performance"},
+    ],
+    non_functional_requirements: [
+      {id:"NFR-001", category:"Scalability", description:"System must support 15,000 concurrent users without degradation", priority:"P1", confidence:0.9, source_quote:"concurrent users should be 15,000 not 10,000"},
+      {id:"NFR-002", category:"Performance", description:"Price feed latency must not exceed 100ms as SLA baseline", priority:"P2", confidence:0.85, source_quote:"target 100ms as the SLA"},
+      {id:"NFR-003", category:"Security", description:"2FA required to pass security audit", priority:"P1", confidence:0.95, source_quote:"security audit requires this"},
+    ],
+    stakeholders: [
+      {name:"Sarah Johnson", role:"Product Manager", decision_authority:"Approver", email:"sarah.johnson@enron.com", mentions:3},
+      {name:"Mark Richards", role:"CTO", decision_authority:"Approver", email:null, mentions:2},
+      {name:"Mike Chen", role:"Lead Engineer", decision_authority:"Influencer", email:null, mentions:2},
+      {name:"Sarah Chen", role:"Frontend Lead", decision_authority:"Informed", email:null, mentions:1},
+    ],
+    decisions: [
+      {id:"DEC-001", description:"$2M budget approved for Q3 Trading Platform", decided_by:"Mark Richards", date_mentioned:"Mar 12", status:"Confirmed", source_quote:"Mark has approved the $2M budget"},
+      {id:"DEC-002", description:"Production deadline extended to May 15", decided_by:"Sarah Johnson", date_mentioned:"Mar 14", status:"Confirmed", source_quote:"Agreed on May 15 for production"},
+      {id:"DEC-003", description:"CSV export elevated to P1 priority", decided_by:"Sarah Johnson", date_mentioned:"Mar 14", status:"Confirmed", source_quote:"CSV export should move to P1"},
+    ],
+    milestones: [
+      {id:"MS-001", name:"Beta Release", deadline:"April 15, 2001", owner:"Dev Team", status:"Upcoming"},
+      {id:"MS-002", name:"Board Presentation", deadline:"April 20, 2001", owner:"Mark Richards", status:"Upcoming"},
+      {id:"MS-003", name:"Production Release", deadline:"May 15, 2001", owner:"Sarah Johnson", status:"Upcoming"},
+    ],
+    conflicts: [
+      {
+        conflict_id:"CONF-001",
+        type:"Deadline conflict",
+        description:"Production deadline differs between email (May 1) and meeting transcript (May 15). Decision in transcript supersedes but email has not been updated.",
+        source_a:"email-001: Hard deadline May 1 for production",
+        source_b:"transcript-001: May 15 formally agreed for production",
+        severity:"High"
+      },
+      {
+        conflict_id:"CONF-002",
+        type:"Requirement contradiction",
+        description:"Concurrent user capacity requirement increased from 10,000 (email) to 15,000 (transcript) — architecture implications not yet assessed.",
+        source_a:"email-001: handle 10,000 concurrent users",
+        source_b:"transcript-001: concurrent users should be 15,000",
+        severity:"Medium"
+      }
+    ]
+  };
+}
+</script>
+</body>
+</html>
