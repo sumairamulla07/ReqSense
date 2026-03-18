@@ -43,7 +43,8 @@ class Stakeholder(BaseModel):
 class Decision(BaseModel):
     id: str = Field(description="e.g. DEC-001")
     description: str = Field(description="What was decided")
-    decided_by: str = Field(description="Who made the decision")
+    decided_by: Optional[str] = Field(default="Unknown", description="Who decided")
+   # decided_by: str = Field(description="Who made the decision")
     date_mentioned: Optional[str] = None
     status: str = Field(description="Confirmed / Pending / Disputed")
     source_quote: str
