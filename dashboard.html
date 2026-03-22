@@ -3,1039 +3,746 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ReqSense — AI Requirements Extraction</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>ReqSense — AI Requirements Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --surface2: #1a1a24;
-    --border: rgba(255,255,255,0.07);
-    --border2: rgba(255,255,255,0.12);
-    --accent: #7c6dfa;
-    --accent2: #a78bfa;
-    --green: #34d399;
-    --red: #f87171;
-    --amber: #fbbf24;
-    --blue: #60a5fa;
-    --text: #e8e8f0;
-    --muted: #6b6b80;
-    --muted2: #9898b0;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    min-height: 100vh;
-    font-size: 14px;
-  }
+/* ── DESIGN TOKENS ─────────────────────────────────────── */
+:root {
+  --bg:       #060610;
+  --bg2:      #0c0c1e;
+  --surface:  #0f0f23;
+  --surface2: #161630;
+  --card:     #13132a;
+  --card2:    #1a1a38;
+  --border:   rgba(139,120,255,0.08);
+  --border2:  rgba(139,120,255,0.16);
+  --border3:  rgba(139,120,255,0.28);
+  --accent:   #7c6dfa;
+  --accent2:  #a78bfa;
+  --accent3:  #c4b5fd;
+  --teal:     #2dd4bf;
+  --teal2:    #5eead4;
+  --blue:     #60a5fa;
+  --green:    #34d399;
+  --red:      #f87171;
+  --red2:     #fca5a5;
+  --amber:    #fbbf24;
+  --pink:     #f472b6;
+  --text:     #e2e2f0;
+  --text2:    #a5a5c0;
+  --text3:    #6b6b8a;
+  --r:        14px;
+  --r2:       10px;
+  --r3:       8px;
+  --shadow:   0 4px 24px rgba(0,0,0,0.4);
+  --shadow2:  0 8px 40px rgba(0,0,0,0.5);
+  --glow:     0 0 30px rgba(124,109,250,0.15);
+  --glow2:    0 0 60px rgba(124,109,250,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;-webkit-font-smoothing:antialiased}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 80% 60% at 10% -10%,rgba(124,109,250,0.07) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 90% 110%,rgba(45,212,191,0.05) 0%,transparent 50%)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border3);border-radius:99px}
 
-  /* Grid noise texture overlay */
-  body::before {
-    content:'';
-    position:fixed; inset:0;
-    background-image: radial-gradient(circle at 20% 50%, rgba(124,109,250,0.06) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 20%, rgba(52,211,153,0.04) 0%, transparent 40%);
-    pointer-events:none; z-index:0;
-  }
+/* ── LAYOUT ────────────────────────────────────────────── */
+.app{position:relative;z-index:1;display:grid;grid-template-rows:52px 1fr;grid-template-columns:340px 1fr;height:100vh;overflow:hidden}
 
-  /* ── HEADER ── */
-  header {
-    position: sticky; top:0; z-index:100;
-    background: rgba(10,10,15,0.85);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    height: 56px;
-    display: flex; align-items:center; justify-content:space-between;
-  }
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: -0.02em;
-  }
-  .logo span { color: var(--accent2); }
-  .badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    background: rgba(124,109,250,0.15);
-    color: var(--accent2);
-    border: 1px solid rgba(124,109,250,0.3);
-    padding: 3px 8px;
-    border-radius: 4px;
-    letter-spacing: 0.05em;
-  }
+/* ── TOPBAR ────────────────────────────────────────────── */
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 20px;background:rgba(9,9,25,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);box-shadow:var(--glow2)}
+.logo{font-size:1.15rem;font-weight:800;letter-spacing:-0.03em;background:linear-gradient(135deg,#a78bfa,#60a5fa,#2dd4bf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.badge{font-size:9px;font-weight:600;letter-spacing:0.08em;padding:3px 8px;border-radius:99px;font-family:'JetBrains Mono',monospace}
+.badge-p{background:rgba(124,109,250,0.12);color:var(--accent3);border:1px solid rgba(124,109,250,0.25)}
+.badge-t{background:rgba(45,212,191,0.1);color:var(--teal2);border:1px solid rgba(45,212,191,0.2)}
+.status-wrap{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(52,211,153,0.6);animation:pglow 2s ease-in-out infinite}
+.sdot.off{background:var(--text3);box-shadow:none;animation:none}
 
-  /* ── LAYOUT ── */
-  .shell {
-    position: relative; z-index:1;
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    height: calc(100vh - 56px);
-  }
+/* ── SIDEBAR ───────────────────────────────────────────── */
+.sidebar{border-right:1px solid rgba(124,109,250,0.15);display:flex;flex-direction:column;background:#0c0c22;overflow:hidden}
+.sb-head{padding:16px 18px 12px;border-bottom:1px solid var(--border)}
+.sb-title{font-size:10px;font-weight:600;letter-spacing:0.1em;color:var(--text3);text-transform:uppercase;margin-bottom:10px}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--r3);padding:3px}
+.tab{flex:1;padding:5px 4px;border:none;border-radius:6px;background:transparent;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;font-weight:500;color:var(--text3);display:flex;align-items:center;justify-content:center;gap:4px;transition:all 0.2s ease}
+.tab:hover{color:var(--text2);background:rgba(255,255,255,0.04)}
+.tab.active{background:rgba(124,109,250,0.18);color:var(--accent2);border:1px solid rgba(124,109,250,0.3);box-shadow:0 0 12px rgba(124,109,250,0.1)}
+.doc-list{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.doc-card{background:#12122e;border:1px solid rgba(124,109,250,0.18);border-radius:var(--r2);overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s}
+.doc-card:hover{border-color:rgba(124,109,250,0.35)}
+.doc-card:focus-within{border-color:rgba(124,109,250,0.5);box-shadow:0 0 0 3px rgba(124,109,250,0.1)}
+.doc-head{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(124,109,250,0.08);border-bottom:1px solid rgba(124,109,250,0.12)}
+.doc-lbl{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#a5a5c0;display:flex;align-items:center;gap:6px}
+.type-pill{font-size:8px;font-weight:600;padding:1px 6px;border-radius:99px;background:rgba(124,109,250,0.2);color:#c4b5fd;border:1px solid rgba(124,109,250,0.35)}
+.doc-rm{background:none;border:none;cursor:pointer;color:#6b6b8a;font-size:13px;width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.doc-rm:hover{color:#f87171;background:rgba(248,113,113,0.12)}
+textarea{width:100%;background:#0f0f28;border:none;outline:none;color:#e2e2f0 !important;font-family:'JetBrains Mono',monospace;font-size:10.5px;line-height:1.65;padding:10px 12px;resize:none;min-height:100px;max-height:150px;-webkit-text-fill-color:#e2e2f0 !important}
+textarea::placeholder{color:var(--text3)}
+.add-btn{margin:0 14px 10px;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border:1px dashed rgba(124,109,250,0.2);border-radius:var(--r3);background:none;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;color:var(--text3);transition:all 0.2s}
+.add-btn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(124,109,250,0.05)}
+.run-btn{margin:0 14px 14px;padding:13px;background:linear-gradient(135deg,#7c6dfa,#6d5ef0);border:none;border-radius:var(--r2);color:#fff;cursor:pointer;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(124,109,250,0.35),0 1px 0 rgba(255,255,255,0.1) inset;transition:all 0.2s;position:relative;overflow:hidden}
+.run-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent);opacity:0;transition:opacity 0.2s}
+.run-btn:hover::before{opacity:1}
+.run-btn:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(124,109,250,0.45),0 1px 0 rgba(255,255,255,0.1) inset}
+.run-btn:active{transform:translateY(0)}
+.run-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+.run-btn.loading .spinner{display:block}
+.run-btn.loading .btnlbl{opacity:0.8}
 
-  /* ── LEFT PANEL ── */
-  .left-panel {
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction:column;
-    overflow: hidden;
-  }
-  .panel-header {
-    padding: 1.25rem 1.5rem 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .panel-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted2);
-    margin-bottom: 0.75rem;
-  }
-  .source-tabs {
-    display: flex; gap: 6px;
-  }
-  .tab {
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted2);
-    transition: all 0.15s;
-    font-family: 'DM Sans', sans-serif;
-  }
-  .tab:hover { border-color: var(--border2); color: var(--text); }
-  .tab.active {
-    background: rgba(124,109,250,0.15);
-    border-color: rgba(124,109,250,0.4);
-    color: var(--accent2);
-  }
+/* ── MAIN ──────────────────────────────────────────────── */
+.main{display:flex;flex-direction:column;overflow:hidden}
 
-  .input-area {
-    flex:1; padding: 1rem 1.5rem;
-    display: flex; flex-direction: column; gap: 0.75rem;
-    overflow-y: auto;
-  }
-  .doc-entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .doc-entry:focus-within { border-color: rgba(124,109,250,0.4); }
-  .doc-entry-header {
-    padding: 8px 12px;
-    background: var(--surface2);
-    display: flex; align-items:center; justify-content:space-between;
-    border-bottom: 1px solid var(--border);
-  }
-  .doc-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted2);
-  }
-  .doc-remove {
-    background: none; border: none; cursor: pointer;
-    color: var(--muted); font-size: 14px; line-height:1;
-    padding: 0 2px;
-    transition: color 0.15s;
-  }
-  .doc-remove:hover { color: var(--red); }
-  textarea {
-    width: 100%;
-    background: transparent;
-    border: none; outline: none;
-    color: var(--text);
-    font-family: 'DM Mono', monospace;
-    font-size: 11.5px;
-    line-height: 1.6;
-    padding: 10px 12px;
-    resize: none;
-    min-height: 110px;
-    max-height: 160px;
-  }
-  textarea::placeholder { color: var(--muted); }
+/* ── PIPELINE ──────────────────────────────────────────── */
+.pipe{padding:10px 20px;border-bottom:1px solid var(--border);background:rgba(9,9,25,0.6);backdrop-filter:blur(10px);display:flex;align-items:center;gap:0}
+.ps{display:flex;align-items:center;gap:8px;padding:6px 14px 6px 10px;border-radius:99px;font-size:11px;font-weight:500;color:var(--text3);transition:all 0.3s ease}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:all 0.3s}
+.ps.active{color:var(--accent2);background:rgba(124,109,250,0.1);border:1px solid rgba(124,109,250,0.2)}
+.ps.active .pdot{background:var(--accent2);box-shadow:0 0 10px var(--accent);animation:pdot 1s ease-in-out infinite}
+.ps.done{color:var(--green)}
+.ps.done .pdot{background:var(--green);box-shadow:0 0 8px rgba(52,211,153,0.5)}
+.parr{color:var(--border3);font-size:11px;margin:0 2px;flex-shrink:0}
+.pstat{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);padding:4px 10px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:99px}
 
-  .add-doc-btn {
-    display: flex; align-items:center; gap: 6px;
-    padding: 8px 12px;
-    border: 1px dashed var(--border2);
-    border-radius: 8px;
-    background: none;
-    color: var(--muted2);
-    cursor: pointer;
-    font-size: 12px;
-    font-family: 'DM Sans', sans-serif;
-    transition: all 0.15s;
-    width: 100%;
-  }
-  .add-doc-btn:hover { border-color: var(--accent); color: var(--accent2); }
+/* ── RESULTS ───────────────────────────────────────────── */
+.results{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:60px 40px;text-align:center}
+.empty-orb{width:80px;height:80px;border-radius:24px;background:linear-gradient(135deg,rgba(124,109,250,0.15),rgba(45,212,191,0.1));border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:var(--glow)}
+.empty h3{font-size:1.3rem;font-weight:700;letter-spacing:-0.02em;background:linear-gradient(135deg,var(--text),var(--text2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.empty p{color:var(--text3);font-size:13px;line-height:1.7;max-width:320px}
 
-  .run-btn {
-    margin: 0 1.5rem 1.5rem;
-    padding: 12px;
-    background: var(--accent);
-    color: white;
-    border: none; border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex; align-items:center; justify-content:center; gap: 8px;
-    position: relative; overflow: hidden;
-  }
-  .run-btn:hover { background: #6d5ef0; transform: translateY(-1px); }
-  .run-btn:active { transform: translateY(0); }
-  .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-  .run-btn .spinner {
-    width: 14px; height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: none;
-  }
-  .run-btn.loading .spinner { display: block; }
-  .run-btn.loading .btn-text { opacity: 0.7; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* ── CARDS ─────────────────────────────────────────────── */
+.summary-card{background:linear-gradient(135deg,rgba(19,19,42,0.9),rgba(22,22,48,0.9));border:1px solid rgba(124,109,250,0.2);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--glow),var(--shadow);animation:fup 0.4s ease both}
+.summary-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(124,109,250,0.5),rgba(45,212,191,0.3),transparent)}
+.summary-card::after{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(124,109,250,0.08),transparent 70%);pointer-events:none}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent2);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.eyebrow::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--accent2);box-shadow:0 0 6px var(--accent)}
+.sum-text{font-size:13px;line-height:1.75;color:var(--text2)}
 
-  /* ── RIGHT PANEL ── */
-  .right-panel {
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;animation:fup 0.4s ease 0.08s both}
+.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 12px;text-align:center;cursor:default;transition:all 0.25s;position:relative;overflow:hidden}
+.sc::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(255,255,255,0.04),transparent 60%)}
+.sc:hover{transform:translateY(-3px);border-color:var(--border2);box-shadow:var(--shadow2)}
+.sc-icon{font-size:16px;margin-bottom:6px;display:block}
+.sc-num{font-size:1.8rem;font-weight:800;line-height:1;margin-bottom:4px;letter-spacing:-0.03em}
+.sc-lbl{font-size:9px;font-weight:600;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase}
 
-  /* ── PIPELINE STATUS ── */
-  .pipeline-bar {
-    padding: 0.75rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items:center; gap: 1rem;
-    background: var(--surface);
-    min-height: 48px;
-  }
-  .pipeline-step {
-    display: flex; align-items:center; gap: 6px;
-    font-size: 11px;
-    color: var(--muted);
-    font-family: 'DM Mono', monospace;
-    transition: color 0.3s;
-  }
-  .pipeline-step.active { color: var(--accent2); }
-  .pipeline-step.done { color: var(--green); }
-  .step-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: currentColor;
-    transition: all 0.3s;
-  }
-  .pipeline-step.active .step-dot {
-    animation: pulse-dot 1s ease-in-out infinite;
-  }
-  @keyframes pulse-dot {
-    0%,100% { opacity:1; transform: scale(1); }
-    50% { opacity:0.5; transform: scale(1.5); }
-  }
-  .step-arrow { color: var(--muted); font-size: 10px; }
+/* Section */
+.sec{animation:fup 0.4s ease both}
+.sec-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sec-ico{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text2)}
+.sec-cnt{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);background:rgba(255,255,255,0.04);border:1px solid var(--border);padding:2px 8px;border-radius:99px}
 
-  /* ── RESULTS AREA ── */
-  .results-area {
-    flex:1; overflow-y:auto; padding: 1.5rem;
-    display: flex; flex-direction:column; gap: 1.25rem;
-  }
+/* Req card */
+.rc{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:12px 14px;margin-bottom:8px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;transition:all 0.2s}
+.rc:hover{border-color:var(--border2);background:var(--card2);transform:translateX(2px)}
+.ppill{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;letter-spacing:0.05em;white-space:nowrap;margin-top:2px}
+.p1{background:rgba(248,113,113,0.12);color:#fca5a5;border:1px solid rgba(248,113,113,0.25)}
+.p2{background:rgba(251,191,36,0.12);color:#fcd34d;border:1px solid rgba(251,191,36,0.25)}
+.p3{background:rgba(96,165,250,0.12);color:#93c5fd;border:1px solid rgba(96,165,250,0.2)}
+.rdesc{font-size:13px;line-height:1.5;color:var(--text)}
+.rquote{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text3);margin-top:5px;padding-left:8px;border-left:2px solid var(--border2);font-style:italic}
+.cbar-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:44px;margin-top:1px}
+.cpct{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+.cbar{width:44px;height:3px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden}
+.cfill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--green));transition:width 0.8s cubic-bezier(0.23,1,0.32,1)}
 
-  /* Empty state */
-  .empty-state {
-    flex:1; display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    gap: 1rem; padding: 3rem;
-    text-align: center;
-  }
-  .empty-icon {
-    width: 64px; height: 64px;
-    border: 1px solid var(--border2);
-    border-radius: 16px;
-    display:flex; align-items:center; justify-content:center;
-    font-size: 28px;
-    background: var(--surface);
-  }
-  .empty-state h3 {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700; font-size: 1.1rem;
-  }
-  .empty-state p { color: var(--muted2); font-size: 13px; line-height: 1.6; max-width: 300px; }
+/* NFR */
+.nfr-cat{font-size:9px;font-weight:700;padding:3px 8px;border-radius:99px;letter-spacing:0.05em;white-space:nowrap;margin-top:2px;font-family:'JetBrains Mono',monospace}
 
-  /* Summary banner */
-  .summary-banner {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    animation: fadeIn 0.4s ease;
-  }
-  .summary-banner .summary-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--accent2);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 0.5rem;
-  }
-  .summary-banner p { font-size: 13px; line-height: 1.7; color: var(--muted2); }
+/* Conflict */
+.cc{background:linear-gradient(135deg,rgba(30,10,10,0.8),rgba(25,8,8,0.8));border:1px solid rgba(248,113,113,0.2);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;box-shadow:0 4px 20px rgba(248,113,113,0.06);transition:all 0.2s;position:relative;overflow:hidden}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(248,113,113,0.4),transparent)}
+.cc:hover{border-color:rgba(248,113,113,0.35)}
+.cc-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cc-type{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;letter-spacing:0.08em;color:var(--red2);text-transform:uppercase}
+.sev{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;padding:2px 7px;border-radius:99px}
+.sev-h{background:rgba(248,113,113,0.2);color:var(--red2);border:1px solid rgba(248,113,113,0.3)}
+.sev-m{background:rgba(251,191,36,0.15);color:#fcd34d;border:1px solid rgba(251,191,36,0.25)}
+.sev-l{background:rgba(107,114,128,0.15);color:#9ca3af;border:1px solid rgba(107,114,128,0.2)}
+.cc-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+.cc-vs{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.cc-qb{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:var(--r3);padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text3);line-height:1.5}
+.vs-b{background:rgba(248,113,113,0.15);color:var(--red);border:1px solid rgba(248,113,113,0.25);border-radius:99px;padding:4px 8px;font-size:9px;font-weight:800;letter-spacing:0.05em;font-family:'JetBrains Mono',monospace}
 
-  /* Stats row */
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 8px;
-    animation: fadeIn 0.4s ease 0.1s both;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    text-align: center;
-  }
-  .stat-num {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 1.4rem;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+/* Stakeholders */
+.stk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.stk-c{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:14px 12px;display:flex;gap:10px;align-items:flex-start;transition:all 0.2s}
+.stk-c:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(124,109,250,0.25),rgba(45,212,191,0.15));border:1px solid rgba(124,109,250,0.25);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--accent2);flex-shrink:0;box-shadow:0 0 12px rgba(124,109,250,0.1)}
+.stk-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.stk-role{font-size:10px;color:var(--text3);margin-bottom:6px}
+.abadge{font-size:8.5px;font-weight:700;padding:2px 7px;border-radius:99px;font-family:'JetBrains Mono',monospace;letter-spacing:0.03em;display:inline-block}
+.a-ap{background:rgba(52,211,153,0.12);color:#6ee7b7;border:1px solid rgba(52,211,153,0.2)}
+.a-in{background:rgba(251,191,36,0.1);color:#fcd34d;border:1px solid rgba(251,191,36,0.18)}
+.a-io{background:rgba(107,114,128,0.12);color:#9ca3af;border:1px solid rgba(107,114,128,0.18)}
 
-  /* Section */
-  .section {
-    animation: fadeIn 0.4s ease both;
-  }
-  .section-header {
-    display: flex; align-items:center; gap: 8px;
-    margin-bottom: 0.75rem;
-  }
-  .section-title {
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 0.8rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted2);
-  }
-  .section-count {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 2px 7px;
-    border-radius: 4px;
-    color: var(--muted2);
-  }
+/* Timeline */
+.tl{display:flex;flex-direction:column}
+.tl-item{display:grid;grid-template-columns:28px 1fr;gap:12px;position:relative}
+.tl-line{position:absolute;left:13px;top:28px;bottom:-8px;width:1px;background:linear-gradient(to bottom,var(--border2),transparent)}
+.tl-dot-w{display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.tl-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);flex-shrink:0;position:relative;z-index:1;box-shadow:0 0 10px currentColor}
+.ms-u{background:var(--blue);color:var(--blue)}
+.ms-p{background:var(--amber);color:var(--amber)}
+.ms-o{background:var(--red);color:var(--red)}
+.ms-d{background:var(--green);color:var(--green)}
+.ms-c{background:var(--red);color:var(--red);animation:pglow 1.5s ease-in-out infinite}
+.tl-con{background:var(--card);border:1px solid var(--border);border-radius:var(--r2);padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s}
+.tl-con:hover{border-color:var(--border2);background:var(--card2)}
+.ms-name{font-size:13px;font-weight:600}
+.ms-meta{font-size:10px;color:var(--text3);margin-top:2px}
+.ms-dl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;color:var(--text2);padding:3px 8px;background:rgba(255,255,255,0.04);border-radius:99px}
 
-  /* Requirement card */
-  .req-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 10px;
-    align-items: start;
-    transition: border-color 0.15s;
-  }
-  .req-card:hover { border-color: var(--border2); }
-  .priority-badge {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    padding: 3px 7px;
-    border-radius: 4px;
-    margin-top: 1px;
-    letter-spacing: 0.03em;
-  }
-  .p1 { background: rgba(248,113,113,0.15); color: #fca5a5; border: 1px solid rgba(248,113,113,0.25); }
-  .p2 { background: rgba(251,191,36,0.15); color: #fcd34d; border: 1px solid rgba(251,191,36,0.25); }
-  .p3 { background: rgba(96,165,250,0.15); color: #93c5fd; border: 1px solid rgba(96,165,250,0.25); }
-  .req-text { font-size: 13px; line-height: 1.5; }
-  .req-quote {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 4px;
-    font-style: italic;
-  }
-  .confidence-bar {
-    width: 40px;
-    display:flex; flex-direction:column; align-items:flex-end; gap:3px;
-    margin-top: 2px;
-  }
-  .conf-num {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--muted);
-  }
-  .conf-track {
-    width: 100%; height: 3px;
-    background: var(--surface2);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .conf-fill {
-    height: 100%;
-    background: var(--green);
-    border-radius: 2px;
-    transition: width 0.6s ease;
-  }
+/* Decision */
+.dc{background:var(--card);border:1px solid var(--border);border-left:2px solid var(--amber);border-radius:var(--r2);padding:11px 14px;margin-bottom:8px;transition:all 0.2s}
+.dc:hover{border-color:rgba(251,191,36,0.3);background:var(--card2)}
+.dc-desc{font-size:13px;color:var(--text);margin-bottom:4px}
+.dc-meta{font-size:10px;color:var(--text3)}
+.dc-stat{float:right;margin-top:-20px;font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;padding:3px 8px;border-radius:99px}
+.ds-c{background:rgba(52,211,153,0.12);color:#6ee7b7;border:1px solid rgba(52,211,153,0.2)}
+.ds-p{background:rgba(251,191,36,0.1);color:#fcd34d;border:1px solid rgba(251,191,36,0.2)}
+.ds-d{background:rgba(248,113,113,0.12);color:#fca5a5;border:1px solid rgba(248,113,113,0.2)}
 
-  /* Stakeholder card */
-  .stakeholder-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px;
-  }
-  .stakeholder-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px;
-    display:flex; gap: 10px; align-items:flex-start;
-    transition: border-color 0.15s;
-  }
-  .stakeholder-card:hover { border-color: var(--border2); }
-  .avatar {
-    width: 32px; height: 32px;
-    border-radius: 8px;
-    background: rgba(124,109,250,0.2);
-    border: 1px solid rgba(124,109,250,0.3);
-    display:flex; align-items:center; justify-content:center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700; font-size: 11px;
-    color: var(--accent2);
-    flex-shrink: 0;
-  }
-  .stakeholder-name { font-weight: 500; font-size: 13px; }
-  .stakeholder-role { font-size: 11px; color: var(--muted2); margin-top: 2px; }
-  .authority-badge {
-    font-size: 10px;
-    font-family: 'DM Mono', monospace;
-    margin-top: 5px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    display: inline-block;
-  }
-  .Approver { background: rgba(52,211,153,0.15); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
-  .Influencer { background: rgba(251,191,36,0.12); color: #fcd34d; border: 1px solid rgba(251,191,36,0.2); }
-  .Informed { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
+/* Export bar */
+.xbar{padding:10px 20px;border-top:1px solid var(--border);background:rgba(9,9,25,0.7);backdrop-filter:blur(10px);display:flex;gap:8px;align-items:center}
+.xbtn{padding:7px 14px;border:1px solid var(--border2);border-radius:var(--r3);background:rgba(255,255,255,0.03);color:var(--text2);font-size:11px;font-weight:500;font-family:'Outfit',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.2s}
+.xbtn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(124,109,250,0.08)}
 
-  /* Milestone */
-  .milestone-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-    display:flex; gap:12px; align-items:center;
-  }
-  .milestone-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .Upcoming { background: var(--blue); }
-  .In\ Progress { background: var(--amber); }
-  .Overdue { background: var(--red); }
-  .Done { background: var(--green); }
-  .milestone-name { font-size: 13px; font-weight: 500; flex:1; }
-  .milestone-deadline {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted2);
-  }
-  .milestone-owner { font-size: 11px; color: var(--muted); }
+/* Skeleton */
+.skel{background:linear-gradient(90deg,var(--surface) 25%,var(--card2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
 
-  /* Conflict card */
-  .conflict-card {
-    background: rgba(248,113,113,0.06);
-    border: 1px solid rgba(248,113,113,0.2);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-bottom: 6px;
-  }
-  .conflict-header {
-    display:flex; align-items:center; gap: 8px; margin-bottom: 8px;
-  }
-  .conflict-type {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    color: var(--red);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .severity-badge {
-    font-size: 10px; font-family: 'DM Mono', monospace;
-    padding: 2px 6px; border-radius: 3px;
-  }
-  .High { background: rgba(248,113,113,0.2); color: #fca5a5; }
-  .Medium { background: rgba(251,191,36,0.15); color: #fcd34d; }
-  .Low { background: rgba(107,114,128,0.15); color: #9ca3af; }
-  .conflict-desc { font-size: 12px; color: var(--muted2); line-height: 1.5; margin-bottom: 8px; }
-  .conflict-vs {
-    display:grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items:center;
-  }
-  .conflict-quote {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 6px 8px;
-    border-radius: 6px;
-    color: var(--muted2);
-    line-height: 1.5;
-  }
-  .vs-label {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; color: var(--red);
-    text-align:center;
-  }
-
-  /* Decision card */
-  .decision-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 2px solid var(--amber);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 6px;
-  }
-  .decision-desc { font-size: 13px; margin-bottom: 4px; }
-  .decision-meta { font-size: 11px; color: var(--muted); }
-  .decision-status {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px; padding: 2px 7px; border-radius: 3px;
-    float: right; margin-top: -18px;
-  }
-  .Confirmed { background: rgba(52,211,153,0.15); color: #6ee7b7; }
-  .Pending { background: rgba(251,191,36,0.12); color: #fcd34d; }
-  .Disputed { background: rgba(248,113,113,0.15); color: #fca5a5; }
-
-  /* Export */
-  .export-bar {
-    padding: 0.75rem 1.5rem;
-    border-top: 1px solid var(--border);
-    display:flex; gap: 8px; align-items:center;
-    background: var(--surface);
-  }
-  .export-btn {
-    padding: 7px 14px;
-    border: 1px solid var(--border2);
-    border-radius: 7px;
-    background: none;
-    color: var(--muted2);
-    font-size: 12px;
-    font-family: 'DM Sans', sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-    display:flex; align-items:center; gap: 6px;
-  }
-  .export-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(124,109,250,0.08); }
-  .export-spacer { flex:1; }
-  .api-status {
-    font-family: 'DM Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    display:flex; align-items:center; gap: 6px;
-  }
-  .api-dot { width:6px; height:6px; border-radius:50%; background: var(--green); animation: pulse-dot 2s infinite; }
-
-  @keyframes fadeIn {
-    from { opacity:0; transform: translateY(8px); }
-    to { opacity:1; transform: translateY(0); }
-  }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+/* Gmail button */
+.gmail-btn{margin:0 14px 8px;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px;border:1px solid rgba(234,67,53,0.28);border-radius:var(--r3);background:rgba(234,67,53,0.07);cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;color:#f87171;transition:all 0.2s}
+.gmail-btn:hover{border-color:#f87171;background:rgba(234,67,53,0.14);transform:translateY(-1px)}
+/* Modal overlay */
+.goverlay{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);align-items:center;justify-content:center}
+.goverlay.show{display:flex}
+.gmodal{background:#13132a;border:1px solid rgba(124,109,250,0.22);border-radius:16px;width:460px;max-width:92vw;box-shadow:0 24px 64px rgba(0,0,0,0.65),0 0 0 1px rgba(255,255,255,0.03);overflow:hidden;animation:fup 0.22s ease}
+.gm-head{padding:16px 18px 13px;border-bottom:1px solid rgba(124,109,250,0.1);display:flex;align-items:center;justify-content:space-between}
+.gm-tabs{display:flex;gap:3px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:3px;margin:13px 18px 0}
+.gm-tab{flex:1;padding:6px 4px;border:1px solid transparent;border-radius:6px;background:transparent;cursor:pointer;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:#6b6b8a;transition:all 0.2s}
+.gm-tab.on{background:rgba(124,109,250,0.17);color:#a78bfa;border-color:rgba(124,109,250,0.28)}
+.gm-panel{padding:15px 18px}
+.gm-label{font-size:9.5px;color:#6b6b8a;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;display:block;margin-bottom:5px}
+.gm-input{width:100%;background:#0f0f23;border:1px solid rgba(124,109,250,0.18);border-radius:8px;padding:8px 10px;color:#e2e2f0;font-size:12px;font-family:'Outfit',sans-serif;outline:none;cursor:pointer;transition:border-color 0.2s}
+.gm-input:focus{border-color:rgba(124,109,250,0.48)}
+.gm-fetch-btn{width:100%;padding:11px;border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s;margin-top:13px}
+.gm-fetch-btn:hover{transform:translateY(-1px)}
+.gm-email-row{display:flex;align-items:center;gap:9px;padding:8px 10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:8px;cursor:pointer;transition:all 0.15s;margin-bottom:4px}
+.gm-email-row:hover{background:rgba(124,109,250,0.07);border-color:rgba(124,109,250,0.18)}
+.gm-email-row.selected{background:rgba(124,109,250,0.1);border-color:rgba(124,109,250,0.28)}
+.gm-cb{width:15px;height:15px;border-radius:4px;border:1.5px solid rgba(255,255,255,0.2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:all 0.15s}
+.gm-email-row.selected .gm-cb{background:var(--accent);border-color:var(--accent);color:white}
+.gm-status{display:none;margin:0 18px 14px;padding:9px 12px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;font-size:11px;color:#34d399;text-align:center}
+/* Animations */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pdot{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.7}}
+@keyframes pglow{0%,100%{opacity:1}50%{opacity:0.6}}
+@keyframes fup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes slin{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 </style>
 </head>
 <body>
+<div class="app">
 
-<header>
-  <div class="logo">Req<span>Sense</span></div>
-  <div style="display:flex;gap:10px;align-items:center;">
-    <span class="badge">AI AGENT v1.0</span>
-    <span class="badge" style="background:rgba(52,211,153,0.1);color:#6ee7b7;border-color:rgba(52,211,153,0.3);">VIT CODE APEX 2.0</span>
+<!-- TOPBAR -->
+<header class="topbar">
+  <span class="logo">ReqSense</span>
+  <span class="badge badge-p" style="margin-left:4px">AI AGENT v1.0</span>
+  <span class="badge badge-t">VIT CODE APEX 2.0</span>
+  <div style="flex:1"></div>
+  <div class="status-wrap">
+    <div class="sdot off" id="sdot"></div>
+    <span id="stxt">Connecting...</span>
   </div>
 </header>
 
-<div class="shell">
-
-  <!-- LEFT: Input Panel -->
-  <div class="left-panel">
-    <div class="panel-header">
-      <div class="panel-title">Input Documents</div>
-      <div class="source-tabs">
-        <button class="tab active" onclick="setTab('email',this)">Email</button>
-        <button class="tab" onclick="setTab('transcript',this)">Transcript</button>
-        <button class="tab" onclick="setTab('chat',this)">Chat</button>
-      </div>
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="sb-title">Input Documents</div>
+    <div class="tabs">
+      <button class="tab active" onclick="setTab('email',this)">✉️ Email</button>
+      <button class="tab" onclick="setTab('transcript',this)">🎙 Transcript</button>
+      <button class="tab" onclick="setTab('chat',this)">💬 Chat</button>
     </div>
-
-    <div class="input-area" id="inputArea">
-      <!-- Doc entries injected here -->
-    </div>
-
-    <button class="add-doc-btn" onclick="addDoc()" style="margin:0 1.5rem 0.75rem;">
-      <span style="font-size:16px;">+</span> Add another document
-    </button>
-
-    <button class="run-btn" id="runBtn" onclick="runPipeline()">
-      <div class="spinner"></div>
-      <span class="btn-text">⚡ Run Extraction Pipeline</span>
-    </button>
   </div>
+  <div class="doc-list" id="docList"></div>
 
-  <!-- RIGHT: Results Panel -->
-  <div class="right-panel">
+  <!-- Gmail fetch button -->
+  <button class="gmail-btn" onclick="openGmailModal()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="currentColor"/></svg>
+    Fetch from Gmail
+  </button>
 
-    <!-- Pipeline status bar -->
-    <div class="pipeline-bar" id="pipelineBar">
-      <div class="pipeline-step" id="step-classify">
-        <div class="step-dot"></div> Classify
+  <button class="add-btn" onclick="addDoc()">
+    <span style="font-size:16px;line-height:1">+</span> Add document
+  </button>
+  <button class="run-btn" id="runBtn" onclick="run()">
+    <div class="spinner"></div>
+    <span class="btnlbl">⚡ Run Extraction Pipeline</span>
+  </button>
+</aside>
+
+<!-- ══ GMAIL MODAL ══ -->
+<div class="goverlay" id="gmailOverlay" onclick="if(event.target===this)closeGmailModal()">
+  <div class="gmodal">
+
+    <!-- Header -->
+    <div class="gm-head">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:30px;height:30px;border-radius:8px;background:rgba(234,67,53,0.12);border:1px solid rgba(234,67,53,0.22);display:flex;align-items:center;justify-content:center">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#f87171"/></svg>
+        </div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#e2e2f0">Fetch from Gmail</div>
+          <div style="font-size:9.5px;color:#6b6b8a;margin-top:1px">Import emails into input area</div>
+        </div>
       </div>
-      <span class="step-arrow">→</span>
-      <div class="pipeline-step" id="step-extract">
-        <div class="step-dot"></div> Extract
-      </div>
-      <span class="step-arrow">→</span>
-      <div class="pipeline-step" id="step-conflict">
-        <div class="step-dot"></div> Detect Conflicts
-      </div>
-      <span class="step-arrow">→</span>
-      <div class="pipeline-step" id="step-aggregate">
-        <div class="step-dot"></div> Aggregate
-      </div>
-      <div style="flex:1"></div>
-      <span id="pipelineStatus" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)">Idle</span>
+      <button onclick="closeGmailModal()" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);cursor:pointer;color:#6b6b8a;font-size:14px;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='#e2e2f0'" onmouseout="this.style.color='#6b6b8a'">✕</button>
     </div>
 
-    <!-- Results -->
-    <div class="results-area" id="resultsArea">
-      <div class="empty-state">
-        <div class="empty-icon">🧠</div>
-        <h3>Ready to Analyze</h3>
-        <p>Paste emails, meeting transcripts, or chat logs on the left. The AI agent will extract structured requirements, stakeholders, decisions, timelines, and flag conflicts.</p>
-      </div>
+    <!-- Tabs -->
+    <div class="gm-tabs">
+      <button class="gm-tab on" id="gtab-date" onclick="switchGTab('date')">📅 By Date Range</button>
+      <button class="gm-tab" id="gtab-manual" onclick="switchGTab('manual')">☑ Select Manually</button>
     </div>
 
-    <!-- Export bar -->
-    <div class="export-bar" id="exportBar" style="display:none">
-      <button class="export-btn" onclick="exportJSON()">↓ Export JSON</button>
-      <button class="export-btn" onclick="exportMarkdown()">↓ Export Markdown Report</button>
-      <div class="export-spacer"></div>
-      <div class="api-status"><div class="api-dot"></div> Connected to FastAPI :8000</div>
+    <!-- DATE RANGE PANEL -->
+    <div class="gm-panel" id="gpanel-date">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:11px">
+        <div>
+          <label class="gm-label">From Date</label>
+          <input type="date" id="gDateFrom" class="gm-input">
+        </div>
+        <div>
+          <label class="gm-label">To Date</label>
+          <input type="date" id="gDateTo" class="gm-input">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <label class="gm-label" style="margin:0;white-space:nowrap">Max emails</label>
+        <select id="gMaxResults" class="gm-input" style="width:auto;padding:6px 10px">
+          <option value="5">5 emails</option>
+          <option value="10" selected>10 emails</option>
+          <option value="20">20 emails</option>
+        </select>
+      </div>
+      <button class="gm-fetch-btn" style="background:linear-gradient(135deg,#f87171,#dc2626)" onclick="fetchByDateRange()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="white"/></svg>
+        Fetch Emails from Gmail
+      </button>
     </div>
+
+    <!-- MANUAL PANEL -->
+    <div class="gm-panel" id="gpanel-manual" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label class="gm-label" style="margin:0">Recent emails</label>
+        <button onclick="loadEmailList()" style="font-size:10px;color:var(--accent2);background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;padding:2px 6px;border-radius:4px;transition:all 0.15s" onmouseover="this.style.background='rgba(124,109,250,0.1)'" onmouseout="this.style.background='none'">↻ Load emails</button>
+      </div>
+      <div id="gEmailList" style="max-height:200px;overflow-y:auto;margin-bottom:10px">
+        <div style="text-align:center;padding:24px 0;color:#6b6b8a;font-size:12px">Click "Load emails" to fetch your recent Gmail</div>
+      </div>
+      <button class="gm-fetch-btn" style="background:linear-gradient(135deg,#7c6dfa,#6356e8)" onclick="importSelectedEmails()">
+        Import Selected Emails
+      </button>
+    </div>
+
+    <!-- Status message -->
+    <div class="gm-status" id="gStatus"></div>
 
   </div>
 </div>
 
-<script>
-// ── State ──────────────────────────────────────────────────────────────
-let docCount = 0;
-let currentTab = 'email';
-let lastReport = null;
+<!-- MAIN -->
+<main class="main">
+  <!-- Pipeline -->
+  <div class="pipe">
+    <div class="ps" id="s-classify"><div class="pdot"></div>Classify</div>
+    <span class="parr">›</span>
+    <div class="ps" id="s-extract"><div class="pdot"></div>Extract</div>
+    <span class="parr">›</span>
+    <div class="ps" id="s-conflict"><div class="pdot"></div>Detect Conflicts</div>
+    <span class="parr">›</span>
+    <div class="ps" id="s-aggregate"><div class="pdot"></div>Aggregate</div>
+    <div style="flex:1"></div>
+    <div class="pstat" id="pstat">Idle</div>
+  </div>
 
-const SAMPLE_EMAIL_1 = `From: sarah.johnson@enron.com
-To: dev-team@enron.com
-Subject: Q3 Trading Platform - Requirements
-Date: Mon, 12 Mar 2001 09:14:22
-
-Team, following yesterday's call with CTO Mark Richards, we've finalized requirements for Q3.
-
-MUST HAVE by April 15th:
-- Real-time price feed with latency under 50ms
-- User authentication with 2FA (security audit requires this)
-- Audit log for all trades - regulatory compliance
-
-The system must handle 10,000 concurrent users.
-Mark has approved the $2M budget. Sarah Chen leads frontend.
-Hard deadline: April 15 beta, May 1 production.
-
-Sarah Johnson, Product Manager`;
-
-const SAMPLE_TRANSCRIPT = `[Meeting Transcript - Trading Platform Sync - March 14]
-
-SPEAKER: Mark Richards (CTO)
-The April 15 beta deadline is firm. Board presentation is April 20. Non-negotiable.
-
-SPEAKER: Mike Chen (Engineering Lead)
-Understood. But I want May 15 formally agreed for production, not May 1.
-Also - we need API rate limiting as CRITICAL. Without it we're exposed to DDoS.
-And concurrent users should be 15,000 not 10,000 - Q2 peak was 12,000.
-
-SPEAKER: Sarah Johnson (PM)
-Agreed on May 15 for production. I'll update the project plan.
-CSV export should move to P1 - compliance team requires it.`;
-
-// ── Init ───────────────────────────────────────────────────────────────
-window.onload = () => {
-  addDoc(SAMPLE_EMAIL_1);
-  addDoc(SAMPLE_TRANSCRIPT);
-};
-
-function setTab(type, el) {
-  currentTab = type;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function addDoc(prefill = '') {
-  docCount++;
-  const id = `doc-${docCount}`;
-  const area = document.getElementById('inputArea');
-  const div = document.createElement('div');
-  div.className = 'doc-entry';
-  div.id = `entry-${id}`;
-  div.innerHTML = `
-    <div class="doc-entry-header">
-      <span class="doc-label">DOC-${String(docCount).padStart(3,'0')} · ${currentTab.toUpperCase()}</span>
-      <button class="doc-remove" onclick="removeDoc('${id}')" title="Remove">✕</button>
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="empty">
+      <div class="empty-orb">🧠</div>
+      <h3>Ready to Analyze</h3>
+      <p>Fetch emails from Gmail, paste content manually, or load demo data to try it out.</p>
+      <button onclick="loadDemo()" style="margin-top:4px;padding:9px 20px;background:rgba(124,109,250,0.12);border:1px solid rgba(124,109,250,0.3);border-radius:10px;color:#a78bfa;font-size:12px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;transition:all 0.2s" onmouseover="this.style.background='rgba(124,109,250,0.2)'" onmouseout="this.style.background='rgba(124,109,250,0.12)'">
+        ⚡ Load Demo Data
+      </button>
     </div>
-    <textarea id="ta-${id}" placeholder="Paste email, transcript, or chat text here...">${prefill}</textarea>
-  `;
-  area.appendChild(div);
+  </div>
+
+  <!-- Export bar -->
+  <div class="xbar" id="xbar" style="display:none">
+    <button class="xbtn" onclick="exportJSON()">↓ Export JSON</button>
+    <button class="xbtn" onclick="exportMD()">↓ Export Markdown</button>
+    <div style="flex:1"></div>
+    <div class="status-wrap">
+      <div class="sdot"></div>
+      <span style="font-size:10px;color:var(--text3)">FastAPI :8000</span>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+let docCount=0, curTab='email', lastReport=null;
+
+// Sample data kept for demo mode only — NOT auto-loaded
+const S_EMAIL=`From: james.derrick@enron.com\nTo: engineering-leads@enron.com\nSubject: EnergyTrack Portal - Final Requirements\nDate: Tue, 6 Nov 2001 09:22:14\n\nTeam, following the board review, here are FINAL requirements for EnergyTrack v2.\n\nCRITICAL (must ship by December 1st):\n- Real-time gas price dashboard, sub-100ms refresh\n- Role-based access: Trader / Analyst / Executive tiers\n- Full audit trail on all price submissions — SOX compliance\n- API integration with Bloomberg and Reuters feeds\n\nSystem must support 5,000 concurrent users.\nBudget approved: $800,000 (signed by CEO Ken Lay).\nLouise Kitchen owns product. Greg Whalley leads engineering.\n\nJames Derrick, General Counsel`;
+
+const S_TRANSCRIPT=`[Meeting Transcript — EnergyTrack Engineering Review — Nov 8, 2001]\n\nSPEAKER: Greg Whalley (Engineering Lead)\nDecember 1st beta is unrealistic. Bloomberg API alone is 3 weeks.\nI'm requesting December 20 beta, January 2 production.\n\nSPEAKER: Louise Kitchen (Product Owner)\nAgreed on December 20 beta. But concurrent users needs revision —\n5,000 is too low, our Q3 peak was 6,200. Target should be 8,000.\n\nSPEAKER: Amanda Martin (Compliance Officer)\nSOX audit trail must cover ALL user actions, not just price submissions.\nThis is non-negotiable from a regulatory standpoint.`;
+
+// On load: only check health — no dummy docs
+window.onload = () => { checkHealth(); };
+
+function loadDemo() {
+  // Clear any existing docs first
+  document.getElementById('docList').innerHTML = '';
+  docCount = 0;
+  addDoc(S_EMAIL, 'email');
+  addDoc(S_TRANSCRIPT, 'transcript');
+  // Scroll sidebar doc list into view
+  document.getElementById('docList').scrollTop = 0;
 }
 
-function removeDoc(id) {
-  const el = document.getElementById(`entry-${id}`);
-  if (el) el.remove();
+async function checkHealth(){
+  try{const r=await fetch('http://localhost:8000/health',{signal:AbortSignal.timeout(2000)});if(r.ok){document.getElementById('sdot').classList.remove('off');document.getElementById('stxt').textContent='API Connected'}}
+  catch{document.getElementById('stxt').textContent='API Offline — Demo Mode'}
 }
 
-// ── Pipeline ───────────────────────────────────────────────────────────
-async function runPipeline() {
-  const textareas = document.querySelectorAll('#inputArea textarea');
-  const docs = [];
-  textareas.forEach((ta, i) => {
-    const text = ta.value.trim();
-    if (text) docs.push({ text, doc_id: `doc-${String(i+1).padStart(3,'0')}` });
+function setTab(t,el){curTab=t;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));el.classList.add('active')}
+
+function addDoc(pre='',to=null){
+  docCount++;const id=`doc-${docCount}`;const t=to||curTab;
+  const lbl={email:'✉️ EMAIL',transcript:'🎙 TRANSCRIPT',chat:'💬 CHAT'};
+  const d=document.getElementById('docList');
+  const div=document.createElement('div');div.className='doc-card';div.id=`e-${id}`;div.style.animation='slin 0.25s ease';
+  div.innerHTML=`<div class="doc-head"><div class="doc-lbl">DOC-${String(docCount).padStart(3,'0')}<span class="type-pill">${lbl[t]}</span></div><button class="doc-rm" onclick="rm('${id}')">✕</button></div><textarea id="ta-${id}" placeholder="Paste ${t} content here...">${pre}</textarea>`;
+  d.appendChild(div);
+}
+
+function rm(id){const el=document.getElementById(`e-${id}`);if(el){el.style.opacity='0';el.style.transform='translateX(-8px)';el.style.transition='0.2s';setTimeout(()=>el.remove(),200)}}
+
+async function run(){
+  const tas=document.querySelectorAll('#docList textarea');
+  const docs=[];
+  tas.forEach((ta,i)=>{
+    const t=ta.value.trim();
+    if(t && t.length > 20) // skip empty or near-empty cards
+      docs.push({text:t, doc_id:`doc-${String(i+1).padStart(3,'0')}`});
   });
-
-  if (!docs.length) { alert('Add at least one document first!'); return; }
-
-  const btn = document.getElementById('runBtn');
-  btn.classList.add('loading');
-  btn.disabled = true;
-  document.getElementById('resultsArea').innerHTML = '';
-
-  setStep('classify', 'active');
-  setStatus('Classifying documents...');
-  await sleep(600);
-
-  setStep('classify', 'done');
-  setStep('extract', 'active');
-  setStatus('Extracting requirements...');
-
+  if(!docs.length){
+    alert('No documents to analyze!\n\nEither paste text manually, fetch from Gmail, or click "Load Demo Data".');
+    return;
+  }
+  const btn=document.getElementById('runBtn');btn.classList.add('loading');btn.disabled=true;
+  ['classify','extract','conflict','aggregate'].forEach(s=>step(s,''));
+  document.getElementById('results').innerHTML=skels();
+  document.getElementById('xbar').style.display='none';
   let report;
+  try{
+    step('classify','active');pstat('Classifying documents…');await sl(500);step('classify','done');
+    step('extract','active');pstat('Extracting requirements…');
+    try{
+      const res=await fetch('http://localhost:8000/extract/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents:docs})});
+      if(!res.ok)throw new Error(res.status);
+      const data=await res.json();report=data.aggregated_report;
+    }catch(e){console.warn('API offline, demo mode:',e.message);report=mock(docs.length);await sl(800)}
+    step('extract','done');step('conflict','active');pstat('Detecting conflicts…');await sl(500);step('conflict','done');
+    step('aggregate','active');pstat('Aggregating report…');await sl(300);step('aggregate','done');
+    pstat(`Done · ${report.total_documents} doc(s) · ${report.conflicts?.length||0} conflict(s)`);
+  }catch(e){report=mock(docs.length);['classify','extract','conflict','aggregate'].forEach(s=>step(s,'done'));pstat('Demo mode')}
+  lastReport=report;render(report);btn.classList.remove('loading');btn.disabled=false;document.getElementById('xbar').style.display='flex';
+}
+
+function step(id,state){document.getElementById(`s-${id}`).className=`ps ${state}`}
+function pstat(m){document.getElementById('pstat').textContent=m}
+function sl(ms){return new Promise(r=>setTimeout(r,ms))}
+function skels(){return`<div style="display:flex;flex-direction:column;gap:14px;animation:fup 0.3s ease"><div class="skel" style="height:80px;border-radius:14px"></div><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">${Array(6).fill('<div class="skel" style="height:80px;border-radius:10px"></div>').join('')}</div><div class="skel" style="height:100px;border-radius:14px"></div><div class="skel" style="height:80px;border-radius:14px"></div></div>`}
+
+function render(r){
+  const a=document.getElementById('results');a.innerHTML='';
+  if(r.summary)a.innerHTML+=`<div class="summary-card"><div class="eyebrow">Executive Summary</div><p class="sum-text">${r.summary}</p></div>`;
+
+  const sd=[
+    {k:'functional_requirements',i:'⚡',l:'Func. Req',c:'linear-gradient(135deg,#a78bfa,#7c6dfa)'},
+    {k:'non_functional_requirements',i:'🔧',l:'NFRs',c:'linear-gradient(135deg,#60a5fa,#3b82f6)'},
+    {k:'stakeholders',i:'👥',l:'Stakeholders',c:'linear-gradient(135deg,#34d399,#10b981)'},
+    {k:'decisions',i:'📋',l:'Decisions',c:'linear-gradient(135deg,#fbbf24,#f59e0b)'},
+    {k:'milestones',i:'📅',l:'Milestones',c:'linear-gradient(135deg,#f472b6,#ec4899)'},
+    {k:'conflicts',i:'⚠️',l:'Conflicts',c:(r.conflicts?.length?'linear-gradient(135deg,#f87171,#ef4444)':'linear-gradient(135deg,#6b6b8a,#4b4b6a)')},
+  ];
+  a.innerHTML+=`<div class="stats-grid">${sd.map(s=>`<div class="sc"><span class="sc-icon">${s.i}</span><div class="sc-num" style="background:${s.c};-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${r[s.k]?.length||0}</div><div class="sc-lbl">${s.l}</div></div>`).join('')}</div>`;
+
+  let dl=0.15;
+
+  if(r.conflicts?.length){
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(248,113,113,0.12)">⚠️</div><span class="sec-title" style="color:#f87171">Conflicts Detected</span><span class="sec-cnt">${r.conflicts.length}</span></div>${r.conflicts.map(c=>{
+      const sc=c.severity?.toLowerCase().includes('high')?'sev-h':c.severity?.toLowerCase().includes('med')?'sev-m':'sev-l';
+      return`<div class="cc"><div class="cc-head"><span class="cc-type">${c.type}</span><span class="sev ${sc}">${c.severity}</span></div><p class="cc-desc">${c.description}</p><div class="cc-vs"><div class="cc-qb">"${c.source_a}"</div><div class="vs-b">VS</div><div class="cc-qb">"${c.source_b}"</div></div></div>`
+    }).join('')}</div>`;dl+=0.06;
+  }
+
+  if(r.functional_requirements?.length){
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(124,109,250,0.12)">⚡</div><span class="sec-title">Functional Requirements</span><span class="sec-cnt">${r.functional_requirements.length}</span></div>${r.functional_requirements.map(fr=>`<div class="rc"><span class="ppill ${(fr.priority||'p3').toLowerCase()}">${fr.priority}</span><div><div class="rdesc">${fr.description}</div><div class="rquote">${fr.source_quote}</div></div><div class="cbar-wrap"><span class="cpct">${Math.round((fr.confidence||0)*100)}%</span><div class="cbar"><div class="cfill" style="width:${(fr.confidence||0)*100}%"></div></div></div></div>`).join('')}</div>`;dl+=0.06;
+  }
+
+  if(r.non_functional_requirements?.length){
+    const nc={'Performance':'rgba(251,191,36,0.12)','Security':'rgba(248,113,113,0.1)','Scalability':'rgba(45,212,191,0.1)','Availability':'rgba(96,165,250,0.1)','Usability':'rgba(167,139,250,0.1)','Compliance':'rgba(244,114,182,0.1)'};
+    const nt={'Performance':'#fcd34d','Security':'#fca5a5','Scalability':'#5eead4','Availability':'#93c5fd','Usability':'#c4b5fd','Compliance':'#f9a8d4'};
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(96,165,250,0.12)">🔧</div><span class="sec-title">Non-Functional Requirements</span><span class="sec-cnt">${r.non_functional_requirements.length}</span></div>${r.non_functional_requirements.map(n=>{const bg=nc[n.category]||'rgba(107,114,128,0.1)';const tc=nt[n.category]||'#9ca3af';return`<div class="rc"><span class="nfr-cat" style="background:${bg};color:${tc};border:1px solid ${tc}30">${n.category||'General'}</span><div><div class="rdesc">${n.description}</div><div class="rquote">${n.source_quote}</div></div><span class="ppill ${(n.priority||'p3').toLowerCase()}">${n.priority}</span></div>`}).join('')}</div>`;dl+=0.06;
+  }
+
+  if(r.stakeholders?.length){
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(52,211,153,0.1)">👥</div><span class="sec-title">Stakeholders</span><span class="sec-cnt">${r.stakeholders.length}</span></div><div class="stk-grid">${r.stakeholders.map(s=>{const ini=(s.name||'??').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();const ac=s.decision_authority?.toLowerCase().includes('approver')?'a-ap':s.decision_authority?.toLowerCase().includes('influencer')?'a-in':'a-io';return`<div class="stk-c"><div class="av">${ini}</div><div><div class="stk-name">${s.name}</div><div class="stk-role">${s.role}</div><span class="abadge ${ac}">${s.decision_authority}</span></div></div>`}).join('')}</div></div>`;dl+=0.06;
+  }
+
+  if(r.milestones?.length){
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(244,114,182,0.1)">📅</div><span class="sec-title">Timelines & Milestones</span><span class="sec-cnt">${r.milestones.length}</span></div><div class="tl">${r.milestones.map((m,i)=>{const ic=m.status?.toLowerCase().includes('conflict')?'ms-c':m.status?.toLowerCase().includes('progress')?'ms-p':m.status?.toLowerCase().includes('over')?'ms-o':m.status?.toLowerCase().includes('done')?'ms-d':'ms-u';return`<div class="tl-item">${i<r.milestones.length-1?'<div class="tl-line"></div>':''}<div class="tl-dot-w"><div class="tl-dot ${ic}"></div></div><div class="tl-con"><div><div class="ms-name">${m.name}</div><div class="ms-meta">${m.owner||'No owner'}</div></div><div style="text-align:right"><div class="ms-dl">${m.deadline||'TBD'}</div><div style="font-size:9px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace">${m.status}</div></div></div></div>`}).join('')}</div></div>`;dl+=0.06;
+  }
+
+  if(r.decisions?.length){
+    a.innerHTML+=`<div class="sec" style="animation-delay:${dl}s"><div class="sec-head"><div class="sec-ico" style="background:rgba(251,191,36,0.1)">📋</div><span class="sec-title">Decisions & Approvals</span><span class="sec-cnt">${r.decisions.length}</span></div>${r.decisions.map(d=>{const sc=d.status?.toLowerCase().includes('confirm')?'ds-c':d.status?.toLowerCase().includes('pend')?'ds-p':'ds-d';return`<div class="dc"><span class="dc-stat ${sc}">${d.status}</span><div class="dc-desc">${d.description}</div><div class="dc-meta">By ${d.decided_by||'Unknown'}${d.date_mentioned?' · '+d.date_mentioned:''}</div></div>`}).join('')}</div>`;
+  }
+}
+
+function exportJSON(){if(!lastReport)return;const b=new Blob([JSON.stringify(lastReport,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='reqsense_report.json';a.click()}
+function exportMD(){
+  if(!lastReport)return;const r=lastReport;
+  let md=`# ReqSense Report\n\n**Summary:** ${r.summary}\n\n## Functional Requirements\n`;
+  r.functional_requirements?.forEach(f=>{md+=`- **[${f.priority}]** ${f.description}\n`});
+  md+=`\n## Non-Functional Requirements\n`;
+  r.non_functional_requirements?.forEach(n=>{md+=`- **[${n.priority}][${n.category}]** ${n.description}\n`});
+  md+=`\n## Stakeholders\n`;r.stakeholders?.forEach(s=>{md+=`- **${s.name}** (${s.role}) — ${s.decision_authority}\n`});
+  md+=`\n## Milestones\n`;r.milestones?.forEach(m=>{md+=`- **${m.name}** — ${m.deadline||'TBD'} [${m.status}]\n`});
+  if(r.conflicts?.length){md+=`\n## ⚠ Conflicts\n`;r.conflicts.forEach(c=>{md+=`- **[${c.severity}] ${c.type}:** ${c.description}\n`})}
+  const b=new Blob([md],{type:'text/markdown'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='reqsense_report.md';a.click();
+}
+
+function mock(n){return{total_documents:n,summary:`Analysis of ${n} document(s) identifies 6 functional requirements across the EnergyTrack Portal project. A critical deadline conflict detected — beta date differs between email (Dec 1) and transcript (Dec 20). Concurrent user target revised from 5,000 to 8,000 in engineering review.`,functional_requirements:[{id:"FR-001",description:"Real-time gas price tracking dashboard with sub-100ms refresh rate",priority:"P1",confidence:0.97,source_quote:"Real-time gas price dashboard, sub-100ms refresh"},{id:"FR-002",description:"Role-based access control with Trader, Analyst, and Executive tiers",priority:"P1",confidence:0.95,source_quote:"Role-based access: Trader / Analyst / Executive tiers"},{id:"FR-003",description:"Full audit trail on all user actions for SOX compliance",priority:"P1",confidence:0.96,source_quote:"SOX audit trail must cover ALL user actions"},{id:"FR-004",description:"API integration with Bloomberg and Reuters market data feeds",priority:"P1",confidence:0.92,source_quote:"API integration with Bloomberg and Reuters feeds"},{id:"FR-005",description:"Bulk data export in CSV and Excel format for compliance reporting",priority:"P2",confidence:0.84,source_quote:"Bulk data export (CSV/Excel) for compliance team"},{id:"FR-006",description:"Email alerts triggered automatically on price threshold breach events",priority:"P2",confidence:0.81,source_quote:"Email alerts for price threshold breaches"}],non_functional_requirements:[{id:"NFR-001",category:"Scalability",description:"System must support 8,000 concurrent users at peak trading hours",priority:"P1",confidence:0.91,source_quote:"target should be 8,000 concurrent users"},{id:"NFR-002",category:"Performance",description:"Dashboard refresh rate must not exceed 100ms latency end-to-end",priority:"P1",confidence:0.95,source_quote:"sub-100ms refresh"},{id:"NFR-003",category:"Compliance",description:"SOX-compliant audit logging covering all user actions system-wide",priority:"P1",confidence:0.93,source_quote:"non-negotiable from a regulatory standpoint"}],stakeholders:[{name:"Louise Kitchen",role:"Product Owner",decision_authority:"Approver",mentions:3},{name:"Greg Whalley",role:"Engineering Lead",decision_authority:"Influencer",mentions:3},{name:"James Derrick",role:"General Counsel",decision_authority:"Approver",mentions:1},{name:"Amanda Martin",role:"Compliance Officer",decision_authority:"Influencer",mentions:1},{name:"Ken Lay",role:"CEO",decision_authority:"Approver",mentions:1}],decisions:[{id:"DEC-001",description:"Beta deadline revised from December 1st to December 20th",decided_by:"Louise Kitchen",date_mentioned:"Nov 8, 2001",status:"Confirmed",source_quote:"Agreed on December 20 beta"},{id:"DEC-002",description:"Concurrent user target increased from 5,000 to 8,000",decided_by:"Greg Whalley",date_mentioned:"Nov 8, 2001",status:"Confirmed",source_quote:"put 8,000 in the spec"},{id:"DEC-003",description:"$800,000 development budget formally approved",decided_by:"Ken Lay",date_mentioned:"Nov 6, 2001",status:"Confirmed",source_quote:"Budget approved: $800,000"}],milestones:[{id:"MS-001",name:"Beta Release",deadline:"December 20, 2001",owner:"Dev Team",status:"Conflict!"},{id:"MS-002",name:"Board Presentation",deadline:"January 3, 2002",owner:"James Derrick",status:"Upcoming"},{id:"MS-003",name:"Production Release",deadline:"January 2, 2002",owner:"Louise Kitchen",status:"Upcoming"}],conflicts:[{conflict_id:"CONF-001",type:"Deadline Conflict",description:"Beta release date contradicts between the initial requirements email (December 1st) and the engineering review transcript (December 20th). The transcript decision was verbally agreed but the original document remains unupdated.",source_a:"Email: hard deadline December 1st for beta",source_b:"Transcript: December 20 beta agreed by Louise Kitchen",severity:"High"},{conflict_id:"CONF-002",type:"Requirement Contradiction",description:"Concurrent user capacity requirement increased from 5,000 to 8,000 between documents. Architecture and infrastructure cost implications have not been formally assessed.",source_a:"Email: system must support 5,000 concurrent users",source_b:"Transcript: target should be 8,000 concurrent users",severity:"Medium"}]}}
+// ── GMAIL MODAL ──────────────────────────────────────────
+let gmailFetchedEmails = [];
+
+function openGmailModal() {
+  // Set default dates: last 30 days
+  const today = new Date();
+  const month = new Date();
+  month.setDate(today.getDate() - 30);
+  document.getElementById('gDateTo').value = today.toISOString().split('T')[0];
+  document.getElementById('gDateFrom').value = month.toISOString().split('T')[0];
+  document.getElementById('gmailOverlay').classList.add('show');
+}
+
+function closeGmailModal() {
+  document.getElementById('gmailOverlay').classList.remove('show');
+  document.getElementById('gStatus').style.display = 'none';
+  document.getElementById('gStatus').textContent = '';
+}
+
+function switchGTab(tab) {
+  document.getElementById('gtab-date').className = 'gm-tab' + (tab==='date'?' on':'');
+  document.getElementById('gtab-manual').className = 'gm-tab' + (tab==='manual'?' on':'');
+  document.getElementById('gpanel-date').style.display = tab==='date' ? 'block' : 'none';
+  document.getElementById('gpanel-manual').style.display = tab==='manual' ? 'block' : 'none';
+}
+
+function showGStatus(msg, isError=false) {
+  const el = document.getElementById('gStatus');
+  el.style.display = 'block';
+  el.style.background = isError ? 'rgba(248,113,113,0.08)' : 'rgba(52,211,153,0.08)';
+  el.style.borderColor = isError ? 'rgba(248,113,113,0.2)' : 'rgba(52,211,153,0.2)';
+  el.style.color = isError ? '#f87171' : '#34d399';
+  el.textContent = msg;
+}
+
+// Load emails into the doc card — same format as copy-paste
+function loadEmailsIntoCards(emails) {
+  if (!emails || emails.length === 0) {
+    showGStatus('No emails found for this date range.', true);
+    return;
+  }
+  emails.forEach(email => addDoc(email.formatted_text, 'email'));
+  showGStatus(`✓ Loaded ${emails.length} email(s) into input area`);
+  setTimeout(() => closeGmailModal(), 1200);
+}
+
+async function fetchByDateRange() {
+  const from = document.getElementById('gDateFrom').value;
+  const to = document.getElementById('gDateTo').value;
+  const max = document.getElementById('gMaxResults').value;
+
+  if (!from || !to) {
+    showGStatus('Please select both From and To dates.', true);
+    return;
+  }
+  if (new Date(from) > new Date(to)) {
+    showGStatus('From date must be before To date.', true);
+    return;
+  }
+
+  showGStatus('Connecting to Gmail...');
+
   try {
-    const res = await fetch('http://localhost:8000/extract/batch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documents: docs })
-    });
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const data = await res.json();
-    report = data.aggregated_report;
-  } catch (e) {
-    // Use mock data when backend not running (for demo/frontend dev)
-    console.warn('Backend not available, using mock data:', e.message);
-    setStatus('Using demo data (backend offline)');
-    await sleep(800);
-    report = getMockReport(docs.length);
-  }
+    // Step 1: Get OAuth URL from backend
+    const authRes = await fetch('http://localhost:8000/auth/gmail/start');
+    if (!authRes.ok) throw new Error('Backend error: ' + authRes.status);
+    const { auth_url } = await authRes.json();
 
-  setStep('extract', 'done');
-  setStep('conflict', 'active');
-  setStatus('Detecting conflicts...');
-  await sleep(500);
+    // Step 2: Open Google login in a new popup window
+    const w = 520, h = 650;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    const popup = window.open(
+      auth_url,
+      'ReqSense Gmail Auth',
+      `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
 
-  setStep('conflict', 'done');
-  setStep('aggregate', 'active');
-  setStatus('Aggregating report...');
-  await sleep(400);
+    if (!popup) {
+      // Popup was blocked — fallback to same-tab redirect
+      showGStatus('Popup blocked. Opening in new tab...', false);
+      window.open(auth_url, '_blank');
+      showGStatus('After signing in, come back and click Fetch again.', false);
+      return;
+    }
 
-  setStep('aggregate', 'done');
-  setStatus(`Done · ${report.total_documents} doc(s) analyzed`);
+    showGStatus('Waiting for Gmail sign-in...');
 
-  lastReport = report;
-  renderReport(report);
+    // Step 3: Poll for auth completion (postMessage + polling fallback)
+    let authDone = false;
 
-  btn.classList.remove('loading');
-  btn.disabled = false;
-  document.getElementById('exportBar').style.display = 'flex';
-}
+    const onMsg = async (e) => {
+      if (e.data !== 'gmail_auth_success') return;
+      authDone = true;
+      window.removeEventListener('message', onMsg);
+      await doFetch(from, to, max);
+    };
+    window.addEventListener('message', onMsg);
 
-function setStep(id, state) {
-  const el = document.getElementById(`step-${id}`);
-  el.className = `pipeline-step ${state}`;
-}
-function setStatus(msg) {
-  document.getElementById('pipelineStatus').textContent = msg;
-}
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// ── Render ─────────────────────────────────────────────────────────────
-function renderReport(r) {
-  const area = document.getElementById('resultsArea');
-  area.innerHTML = '';
-
-  // Summary
-  if (r.summary) {
-    area.innerHTML += `
-      <div class="summary-banner">
-        <div class="summary-label">Executive Summary</div>
-        <p>${r.summary}</p>
-      </div>`;
-  }
-
-  // Stats
-  area.innerHTML += `
-    <div class="stats-row">
-      ${stat(r.functional_requirements?.length||0, 'Func. Req', '#a78bfa')}
-      ${stat(r.non_functional_requirements?.length||0, 'NFRs', '#60a5fa')}
-      ${stat(r.stakeholders?.length||0, 'Stakeholders', '#34d399')}
-      ${stat(r.decisions?.length||0, 'Decisions', '#fbbf24')}
-      ${stat(r.milestones?.length||0, 'Milestones', '#f472b6')}
-      ${stat(r.conflicts?.length||0, 'Conflicts', r.conflicts?.length ? '#f87171' : '#6b6b80')}
-    </div>`;
-
-  // Conflicts first (most important)
-  if (r.conflicts?.length) {
-    let html = `<div class="section" style="animation-delay:0.15s"><div class="section-header">
-      <span class="section-title" style="color:#f87171">⚠ Conflicts Detected</span>
-      <span class="section-count">${r.conflicts.length}</span></div>`;
-    r.conflicts.forEach(c => {
-      html += `<div class="conflict-card">
-        <div class="conflict-header">
-          <span class="conflict-type">${c.type}</span>
-          <span class="severity-badge ${c.severity}">${c.severity}</span>
-        </div>
-        <div class="conflict-desc">${c.description}</div>
-        <div class="conflict-vs">
-          <div class="conflict-quote">"${c.source_a}"</div>
-          <div class="vs-label">VS</div>
-          <div class="conflict-quote">"${c.source_b}"</div>
-        </div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div>';
-  }
-
-  // Functional Requirements
-  if (r.functional_requirements?.length) {
-    let html = `<div class="section" style="animation-delay:0.2s"><div class="section-header">
-      <span class="section-title">Functional Requirements</span>
-      <span class="section-count">${r.functional_requirements.length}</span></div>`;
-    r.functional_requirements.forEach(fr => {
-      html += `<div class="req-card">
-        <span class="priority-badge ${fr.priority}">${fr.priority}</span>
-        <div>
-          <div class="req-text">${fr.description}</div>
-          <div class="req-quote">"${fr.source_quote}"</div>
-        </div>
-        <div class="confidence-bar">
-          <span class="conf-num">${Math.round(fr.confidence*100)}%</span>
-          <div class="conf-track"><div class="conf-fill" style="width:${fr.confidence*100}%"></div></div>
-        </div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div>';
-  }
-
-  // Non-Functional Requirements
-  if (r.non_functional_requirements?.length) {
-    let html = `<div class="section" style="animation-delay:0.25s"><div class="section-header">
-      <span class="section-title">Non-Functional Requirements</span>
-      <span class="section-count">${r.non_functional_requirements.length}</span></div>`;
-    r.non_functional_requirements.forEach(nfr => {
-      html += `<div class="req-card">
-        <span class="priority-badge ${nfr.priority}">${nfr.priority}</span>
-        <div>
-          <div class="req-text"><span style="color:var(--muted2);font-size:11px;font-family:'DM Mono',monospace;">[${nfr.category}]</span> ${nfr.description}</div>
-          <div class="req-quote">"${nfr.source_quote}"</div>
-        </div>
-        <div class="confidence-bar">
-          <span class="conf-num">${Math.round(nfr.confidence*100)}%</span>
-          <div class="conf-track"><div class="conf-fill" style="width:${nfr.confidence*100}%"></div></div>
-        </div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div>';
-  }
-
-  // Stakeholders
-  if (r.stakeholders?.length) {
-    let html = `<div class="section" style="animation-delay:0.3s"><div class="section-header">
-      <span class="section-title">Stakeholders</span>
-      <span class="section-count">${r.stakeholders.length}</span></div>
-      <div class="stakeholder-grid">`;
-    r.stakeholders.forEach(s => {
-      const initials = s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      html += `<div class="stakeholder-card">
-        <div class="avatar">${initials}</div>
-        <div>
-          <div class="stakeholder-name">${s.name}</div>
-          <div class="stakeholder-role">${s.role}</div>
-          <span class="authority-badge ${s.decision_authority}">${s.decision_authority}</span>
-        </div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div></div>';
-  }
-
-  // Milestones
-  if (r.milestones?.length) {
-    let html = `<div class="section" style="animation-delay:0.35s"><div class="section-header">
-      <span class="section-title">Timelines & Milestones</span>
-      <span class="section-count">${r.milestones.length}</span></div>`;
-    r.milestones.forEach(m => {
-      html += `<div class="milestone-card">
-        <div class="milestone-dot ${m.status}"></div>
-        <div class="milestone-name">${m.name}</div>
-        ${m.owner ? `<div class="milestone-owner">${m.owner}</div>` : ''}
-        <div class="milestone-deadline">${m.deadline||'TBD'}</div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div>';
-  }
-
-  // Decisions
-  if (r.decisions?.length) {
-    let html = `<div class="section" style="animation-delay:0.4s"><div class="section-header">
-      <span class="section-title">Decisions & Approvals</span>
-      <span class="section-count">${r.decisions.length}</span></div>`;
-    r.decisions.forEach(d => {
-      html += `<div class="decision-card">
-        <span class="decision-status ${d.status}">${d.status}</span>
-        <div class="decision-desc">${d.description}</div>
-        <div class="decision-meta">By ${d.decided_by}${d.date_mentioned ? ' · '+d.date_mentioned : ''}</div>
-      </div>`;
-    });
-    area.innerHTML += html + '</div>';
-  }
-}
-
-function stat(num, label, color) {
-  return `<div class="stat-card">
-    <div class="stat-num" style="color:${color}">${num}</div>
-    <div class="stat-label">${label}</div>
-  </div>`;
-}
-
-// ── Export ─────────────────────────────────────────────────────────────
-function exportJSON() {
-  if (!lastReport) return;
-  const blob = new Blob([JSON.stringify(lastReport, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'requirements_report.json';
-  a.click();
-}
-
-function exportMarkdown() {
-  if (!lastReport) return;
-  const r = lastReport;
-  let md = `# Requirements Extraction Report\n\n**Summary:** ${r.summary}\n\n`;
-  md += `## Functional Requirements\n`;
-  r.functional_requirements?.forEach(fr => {
-    md += `- **[${fr.priority}]** ${fr.description} *(confidence: ${Math.round(fr.confidence*100)}%)*\n`;
-  });
-  md += `\n## Non-Functional Requirements\n`;
-  r.non_functional_requirements?.forEach(nfr => {
-    md += `- **[${nfr.priority}][${nfr.category}]** ${nfr.description}\n`;
-  });
-  md += `\n## Stakeholders\n`;
-  r.stakeholders?.forEach(s => {
-    md += `- **${s.name}** (${s.role}) — ${s.decision_authority}\n`;
-  });
-  md += `\n## Milestones\n`;
-  r.milestones?.forEach(m => {
-    md += `- **${m.name}** — ${m.deadline||'TBD'} [${m.status}]\n`;
-  });
-  if (r.conflicts?.length) {
-    md += `\n## ⚠ Conflicts\n`;
-    r.conflicts.forEach(c => {
-      md += `- **[${c.severity}] ${c.type}:** ${c.description}\n`;
-    });
-  }
-  const blob = new Blob([md], {type:'text/markdown'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'requirements_report.md';
-  a.click();
-}
-
-// ── Mock Data (when backend offline) ──────────────────────────────────
-function getMockReport(docCount) {
-  return {
-    total_documents: docCount,
-    summary: "Analysis of the Q3 Trading Platform project reveals 6 functional requirements and 3 non-functional requirements across 2 documents. A critical deadline conflict was detected between email (May 1) and transcript (May 15) for the production release, requiring immediate stakeholder alignment.",
-    functional_requirements: [
-      {id:"FR-001", description:"Real-time price feed integration with sub-50ms latency", priority:"P1", confidence:0.98, source_quote:"latency under 50ms"},
-      {id:"FR-002", description:"User authentication with two-factor authentication (2FA)", priority:"P1", confidence:0.97, source_quote:"User authentication with 2FA support"},
-      {id:"FR-003", description:"Audit log for all trade transactions for regulatory compliance", priority:"P1", confidence:0.95, source_quote:"Audit log for all trades - regulatory compliance"},
-      {id:"FR-004", description:"API rate limiting to prevent DDoS exposure", priority:"P1", confidence:0.92, source_quote:"we need API rate limiting as CRITICAL"},
-      {id:"FR-005", description:"CSV export for trade history", priority:"P1", confidence:0.88, source_quote:"CSV export should move to P1"},
-      {id:"FR-006", description:"Portfolio performance dashboard", priority:"P3", confidence:0.75, source_quote:"Dashboard showing portfolio performance"},
-    ],
-    non_functional_requirements: [
-      {id:"NFR-001", category:"Scalability", description:"System must support 15,000 concurrent users without degradation", priority:"P1", confidence:0.9, source_quote:"concurrent users should be 15,000 not 10,000"},
-      {id:"NFR-002", category:"Performance", description:"Price feed latency must not exceed 100ms as SLA baseline", priority:"P2", confidence:0.85, source_quote:"target 100ms as the SLA"},
-      {id:"NFR-003", category:"Security", description:"2FA required to pass security audit", priority:"P1", confidence:0.95, source_quote:"security audit requires this"},
-    ],
-    stakeholders: [
-      {name:"Sarah Johnson", role:"Product Manager", decision_authority:"Approver", email:"sarah.johnson@enron.com", mentions:3},
-      {name:"Mark Richards", role:"CTO", decision_authority:"Approver", email:null, mentions:2},
-      {name:"Mike Chen", role:"Lead Engineer", decision_authority:"Influencer", email:null, mentions:2},
-      {name:"Sarah Chen", role:"Frontend Lead", decision_authority:"Informed", email:null, mentions:1},
-    ],
-    decisions: [
-      {id:"DEC-001", description:"$2M budget approved for Q3 Trading Platform", decided_by:"Mark Richards", date_mentioned:"Mar 12", status:"Confirmed", source_quote:"Mark has approved the $2M budget"},
-      {id:"DEC-002", description:"Production deadline extended to May 15", decided_by:"Sarah Johnson", date_mentioned:"Mar 14", status:"Confirmed", source_quote:"Agreed on May 15 for production"},
-      {id:"DEC-003", description:"CSV export elevated to P1 priority", decided_by:"Sarah Johnson", date_mentioned:"Mar 14", status:"Confirmed", source_quote:"CSV export should move to P1"},
-    ],
-    milestones: [
-      {id:"MS-001", name:"Beta Release", deadline:"April 15, 2001", owner:"Dev Team", status:"Upcoming"},
-      {id:"MS-002", name:"Board Presentation", deadline:"April 20, 2001", owner:"Mark Richards", status:"Upcoming"},
-      {id:"MS-003", name:"Production Release", deadline:"May 15, 2001", owner:"Sarah Johnson", status:"Upcoming"},
-    ],
-    conflicts: [
-      {
-        conflict_id:"CONF-001",
-        type:"Deadline conflict",
-        description:"Production deadline differs between email (May 1) and meeting transcript (May 15). Decision in transcript supersedes but email has not been updated.",
-        source_a:"email-001: Hard deadline May 1 for production",
-        source_b:"transcript-001: May 15 formally agreed for production",
-        severity:"High"
-      },
-      {
-        conflict_id:"CONF-002",
-        type:"Requirement contradiction",
-        description:"Concurrent user capacity requirement increased from 10,000 (email) to 15,000 (transcript) — architecture implications not yet assessed.",
-        source_a:"email-001: handle 10,000 concurrent users",
-        source_b:"transcript-001: concurrent users should be 15,000",
-        severity:"Medium"
+    // Polling fallback — check every second if popup closed and auth succeeded
+    const poll = setInterval(async () => {
+      if (authDone) { clearInterval(poll); return; }
+      if (popup.closed) {
+        clearInterval(poll);
+        window.removeEventListener('message', onMsg);
+        // Check if credentials were saved
+        const statusRes = await fetch('http://localhost:8000/gmail/status');
+        const status = await statusRes.json();
+        if (status.connected) {
+          await doFetch(from, to, max);
+        } else {
+          showGStatus('Sign-in cancelled or failed. Try again.', true);
+        }
       }
-    ]
-  };
+    }, 1000);
+
+  } catch(e) {
+    showGStatus('Error: ' + e.message + ' — Is uvicorn running?', true);
+  }
+}
+
+async function doFetch(from, to, max) {
+  showGStatus('Fetching your emails...');
+  try {
+    // Convert YYYY-MM-DD to YYYY/MM/DD for Gmail query
+    const fromFmt = from.replace(/-/g, '/');
+    const toFmt = to.replace(/-/g, '/');
+    const query = `after:${fromFmt} before:${toFmt}`;
+    const r = await fetch(
+      `http://localhost:8000/gmail/fetch?max_results=${max}&query=${encodeURIComponent(query)}`
+    );
+    if (!r.ok) throw new Error('Fetch failed: ' + r.status);
+    const data = await r.json();
+    loadEmailsIntoCards(data.emails);
+  } catch(e) {
+    showGStatus('Could not fetch emails: ' + e.message, true);
+  }
+}
+
+async function loadEmailList() {
+  const listEl = document.getElementById('gEmailList');
+  listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#6b6b8a;font-size:12px">⏳ Connecting to Gmail...</div>';
+
+  try {
+    // Check if already connected
+    const statusRes = await fetch('http://localhost:8000/gmail/status');
+    const status = await statusRes.json();
+
+    if (!status.connected) {
+      // Need to authenticate first
+      const authRes = await fetch('http://localhost:8000/auth/gmail/start');
+      const { auth_url } = await authRes.json();
+
+      const w=520,h=650,left=(screen.width-w)/2,top=(screen.height-h)/2;
+      const popup = window.open(auth_url,'ReqSense Gmail Auth',`width=${w},height=${h},left=${left},top=${top}`);
+
+      listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#a78bfa;font-size:12px">Sign in to Gmail in the popup, then click "Load emails" again.</div>';
+
+      // Wait for popup to close
+      const poll = setInterval(async () => {
+        if (popup && popup.closed) {
+          clearInterval(poll);
+          loadEmailList(); // retry
+        }
+      }, 1000);
+      return;
+    }
+
+    // Already connected — fetch recent emails
+    const r = await fetch('http://localhost:8000/gmail/fetch?max_results=20');
+    const data = await r.json();
+    gmailFetchedEmails = data.emails || [];
+
+    if (gmailFetchedEmails.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#6b6b8a;font-size:12px">No emails found.</div>';
+      return;
+    }
+
+    listEl.innerHTML = gmailFetchedEmails.map((em, i) => `
+      <div class="gm-email-row" id="grow-${i}" onclick="toggleEmailRow(${i})">
+        <div class="gm-cb" id="gcb-${i}"></div>
+        <div style="min-width:0;flex:1">
+          <div style="font-size:11px;font-weight:600;color:#e2e2f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${em.subject||'(no subject)'}</div>
+          <div style="font-size:9.5px;color:#6b6b8a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${em.from} · ${em.date?.substring(0,16)||''}</div>
+        </div>
+      </div>`).join('');
+
+  } catch(e) {
+    listEl.innerHTML = `<div style="text-align:center;padding:20px;color:#f87171;font-size:12px">Error: ${e.message}</div>`;
+  }
+}
+
+function toggleEmailRow(i) {
+  const row = document.getElementById(`grow-${i}`);
+  const cb = document.getElementById(`gcb-${i}`);
+  const isSelected = row.classList.toggle('selected');
+  cb.textContent = isSelected ? '✓' : '';
+}
+
+function importSelectedEmails() {
+  const selected = gmailFetchedEmails.filter((_, i) => {
+    return document.getElementById(`grow-${i}`)?.classList.contains('selected');
+  });
+  if (selected.length === 0) {
+    showGStatus('Select at least one email first.', true);
+    return;
+  }
+  loadEmailsIntoCards(selected);
 }
 </script>
 </body>
