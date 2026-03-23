@@ -458,15 +458,57 @@ async function run(){
   try{
     step('classify','active');pstat('Classifying documents…');await sl(500);step('classify','done');
     step('extract','active');pstat('Extracting requirements…');
-    try{
-      const res=await fetch('http://localhost:8000/extract/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({documents:docs})});
-      if(!res.ok)throw new Error(res.status);
-      const data=await res.json();report=data.aggregated_report;
-    }catch(e){console.warn('API offline, demo mode:',e.message);report=mock(docs.length);await sl(800)}
+
+    const res=await fetch('http://localhost:8000/extract/batch',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({documents:docs})
+    });
+
+    if(!res.ok){
+      // Show the actual error from the backend — don't silently mock
+      let errDetail = res.status;
+      try{ const errData=await res.json(); errDetail=errData.detail||errData.error||res.status; }catch(e){}
+      step('extract','');
+      pstat(`Error ${res.status}`);
+      document.getElementById('results').innerHTML=`
+        <div class="empty" style="padding:40px">
+          <div class="empty-orb" style="background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.25)">⚠️</div>
+          <h3 style="color:#f87171">Extraction Failed</h3>
+          <p style="color:#a5a5c0;font-family:'JetBrains Mono',monospace;font-size:11px;max-width:500px;text-align:center">${errDetail}</p>
+          <p style="color:#6b6b8a;font-size:11px;margin-top:8px">Check your terminal for the full error. Common causes: Gemini quota, invalid API key, or empty documents.</p>
+        </div>`;
+      btn.classList.remove('loading');btn.disabled=false;
+      return;
+    }
+
+    const data=await res.json();
+    report=data.aggregated_report;
+
     step('extract','done');step('conflict','active');pstat('Detecting conflicts…');await sl(500);step('conflict','done');
     step('aggregate','active');pstat('Aggregating report…');await sl(300);step('aggregate','done');
     pstat(`Done · ${report.total_documents} doc(s) · ${report.conflicts?.length||0} conflict(s)`);
-  }catch(e){report=mock(docs.length);['classify','extract','conflict','aggregate'].forEach(s=>step(s,'done'));pstat('Demo mode')}
+
+  }catch(e){
+    // Only show mock if backend is completely unreachable (offline)
+    const isOffline = e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed to fetch');
+    if(isOffline){
+      console.warn('Backend offline — demo mode');
+      report=mock(docs.length);
+      ['classify','extract','conflict','aggregate'].forEach(s=>step(s,'done'));
+      pstat('Demo mode — backend offline');
+    } else {
+      pstat('Error — see console');
+      document.getElementById('results').innerHTML=`
+        <div class="empty" style="padding:40px">
+          <div class="empty-orb" style="background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.25)">⚠️</div>
+          <h3 style="color:#f87171">Unexpected Error</h3>
+          <p style="color:#6b6b8a;font-size:12px">${e.message}</p>
+        </div>`;
+      btn.classList.remove('loading');btn.disabled=false;
+      return;
+    }
+  }
   lastReport=report;render(report);btn.classList.remove('loading');btn.disabled=false;document.getElementById('xbar').style.display='flex';
 }
 

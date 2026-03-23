@@ -241,20 +241,57 @@ Subject: {headers.get('subject', '(no subject)')}
         raise HTTPException(status_code=500, detail=str(e))
 
 def _extract_body(payload) -> str:
-    """Recursively extract plain text from Gmail payload."""
-    body = ""
-    if payload.get('mimeType') == 'text/plain':
+    """
+    Recursively extract plain text from Gmail message payload.
+    Handles: text/plain, multipart/mixed, multipart/alternative, multipart/related
+    """
+    mime = payload.get('mimeType', '')
+
+    # Direct plain text part
+    if mime == 'text/plain':
         data = payload.get('body', {}).get('data', '')
         if data:
-            body = base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
-    elif 'parts' in payload:
+            text = base64.urlsafe_b64decode(data + '==').decode('utf-8', errors='ignore')
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            return '\n'.join(lines)
+
+    # Direct HTML — strip tags as fallback
+    if mime == 'text/html':
+        data = payload.get('body', {}).get('data', '')
+        if data:
+            html = base64.urlsafe_b64decode(data + '==').decode('utf-8', errors='ignore')
+            import re
+            text = re.sub(r'<[^>]+>', ' ', html)
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text[:4000]
+
+    # Multipart — search all parts, prefer plain text
+    if 'parts' in payload:
+        plain_text = ''
+        html_text = ''
         for part in payload['parts']:
-            body = _extract_body(part)
-            if body:
-                break
-    # Strip excessive whitespace
-    lines = [l.strip() for l in body.splitlines() if l.strip()]
-    return '\n'.join(lines)
+            result = _extract_body(part)
+            if result:
+                part_mime = part.get('mimeType', '')
+                if 'plain' in part_mime and not plain_text:
+                    plain_text = result
+                elif 'html' in part_mime and not html_text:
+                    html_text = result
+                elif not plain_text and not html_text:
+                    plain_text = result  # take whatever we get
+        return plain_text or html_text
+
+    # Body data directly on this node
+    data = payload.get('body', {}).get('data', '')
+    if data:
+        try:
+            text = base64.urlsafe_b64decode(data + '==').decode('utf-8', errors='ignore')
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            return '\n'.join(lines)
+        except Exception:
+            pass
+
+    return ''
 
 @app.get("/gmail/status")
 def gmail_status():
